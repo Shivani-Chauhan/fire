@@ -206,6 +206,14 @@ body.typing-mode #app{max-width:960px}
 #tp-finish .fbig{font-family:'JetBrains Mono',monospace;font-size:60px;font-weight:700;color:#e2b714;line-height:1}
 #tp-finish .fbig small{font-size:22px;color:var(--mu);font-weight:400}
 #tp-endbar{margin-top:8px}
+.tp-winner{text-align:center;padding:16px 0 20px;animation:pop .5s cubic-bezier(.34,1.56,.64,1) both}
+.tp-winner .tp-trophy{font-size:46px;line-height:1;filter:drop-shadow(0 0 22px rgba(226,183,20,.65));animation:trophyPop .6s cubic-bezier(.34,1.56,.64,1) both}
+.tp-winner .tp-winav{font-size:58px;line-height:1.15;margin-top:2px}
+.tp-winner .tp-winname{font-family:'Righteous',cursive;font-size:34px;color:#e2b714;letter-spacing:1px;margin-top:6px;text-shadow:0 0 34px rgba(226,183,20,.55);animation:blink 1.6s ease-in-out 1}
+.tp-winner .tp-winsub{font-family:'JetBrains Mono',monospace;color:var(--te);font-size:15px;margin-top:10px}
+.tp-winner .tp-winsub small{color:var(--mu)}
+@keyframes trophyPop{0%{transform:scale(0) rotate(-30deg)}70%{transform:scale(1.25) rotate(8deg)}100%{transform:scale(1) rotate(0)}}
+#tp-fx{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:9998}
 </style>
 </head>
 <body>
@@ -1916,6 +1924,7 @@ let TP_sig=null, TP_localRaceId=null;
 let TP_countTimer=null, TP_wpmRaf=null;
 let TP_raceEnabled=false, TP_finished=false, TP_raceStartMs=0, TP_lastBcast=0;
 let TP_wordCount=30;
+let TP_celebrated=false, TP_fxRaf=null;
 
 const TP_sRef=()=>db.ref(`${TP_ROOT}/${TP_code}/state`);
 const TP_playersRef=()=>db.ref(`${TP_ROOT}/${TP_code}/players`);
@@ -1978,6 +1987,7 @@ function TP_leave(toMenu){
   TP_detach();
   if(TP_countTimer){ clearInterval(TP_countTimer); TP_countTimer=null; }
   if(TP_wpmRaf){ cancelAnimationFrame(TP_wpmRaf); TP_wpmRaf=null; }
+  TP_stopFireworks(); TP_celebrated=false;
   document.removeEventListener("keydown", TP_onKey);
   TP_raceEnabled=false; TP_finished=false;
   if(TP_code){ try{ TP_meRef().onDisconnect().cancel(); TP_meRef().remove(); }catch(e){} }
@@ -2105,6 +2115,7 @@ function TP_startRaceLocal(){
   if(!TP_state) return;
   TP_localRaceId=TP_state.raceId;
   TP_finished=false; TP_raceEnabled=false;
+  TP_celebrated=false; TP_stopFireworks();
   if(TP_wpmRaf){ cancelAnimationFrame(TP_wpmRaf); TP_wpmRaf=null; }
   TYPE_typed=""; TYPE_correctChars=0; TYPE_incorrectChars=0; TYPE_totalKeys=0; TYPE_scrollOffset=0;
   TYPE_queue=(TP_state.words||[]).slice();
@@ -2226,12 +2237,55 @@ function TP_renderBoard(){
   const eb=document.getElementById("tp-endbar");
   if(eb){
     if(arr.length>0 && arr.every(p=>p.done)){
-      eb.innerHTML = TP_isHost
-        ? `<div style="text-align:center;color:#00E096;font-family:'JetBrains Mono',monospace;font-weight:700;margin:12px 0">🏁 Everyone finished!</div><button class="btn" id="tp-again" style="background:#00E096;color:#000;font-size:16px;padding:14px">🔁 Race Again</button>`
-        : `<div style="text-align:center;color:var(--mu);font-size:14px;padding:14px"><span class="blink">🏁</span> Everyone finished — waiting for host to restart…</div>`;
+      const win=arr[0];
+      const iWon=win && win.pid===myId;
+      const cta = TP_isHost
+        ? `<button class="btn" id="tp-again" style="background:#e2b714;color:#000;font-size:16px;padding:14px">🔁 Race Again</button>`
+        : `<div style="text-align:center;color:var(--mu);font-size:14px;padding:14px"><span class="blink">⏳</span> Waiting for host to restart…</div>`;
+      eb.innerHTML = `
+        <div class="tp-winner">
+          <div class="tp-trophy">🏆</div>
+          <div class="tp-winav">${win.av||"🙂"}</div>
+          <div class="tp-winname">${iWon?"YOU WIN!":`${win.name||"?"} WINS!`}</div>
+          <div class="tp-winsub">${win.wpm||0} <small>wpm</small> · ${win.acc||0}<small>% acc</small></div>
+        </div>${cta}`;
       const again=document.getElementById("tp-again"); if(again) again.onclick=()=>TP_start();
-    } else eb.innerHTML="";
+      if(!TP_celebrated){ TP_celebrated=true; TP_fireworks(iWon); try{ playSfx('win'); }catch(e){} }
+    } else { eb.innerHTML=""; TP_celebrated=false; TP_stopFireworks(); }
   }
+}
+
+// ── Fireworks celebration (canvas, self-contained) ────────────────
+function TP_fireworks(big){
+  TP_stopFireworks();
+  const cv=document.createElement("canvas"); cv.id="tp-fx";
+  document.body.appendChild(cv);
+  const ctx=cv.getContext("2d");
+  const dpr=Math.min(2,window.devicePixelRatio||1);
+  const resize=()=>{ cv.width=innerWidth*dpr; cv.height=innerHeight*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); };
+  resize(); cv._resize=resize; window.addEventListener("resize",resize);
+  const W=()=>innerWidth, H=()=>innerHeight;
+  const cols=["#e2b714","#FFE600","#FF3D71","#00E5FF","#00E096","#A855F7"];
+  let rockets=[], parts=[], last=performance.now(), launchAt=0;
+  const stopAt=performance.now()+(big?7000:5000);
+  const launch=()=>rockets.push({x:W()*(0.12+Math.random()*0.76),y:H()+8,vy:-(6.6+Math.random()*3),ty:H()*(0.16+Math.random()*0.32),col:cols[(Math.random()*cols.length)|0]});
+  const burst=(x,y,col)=>{ const n=30+((Math.random()*20)|0); for(let i=0;i<n;i++){ const a=(Math.PI*2*i)/n+Math.random()*0.2, sp=1.4+Math.random()*3.6; parts.push({x,y,vx:Math.cos(a)*sp,vy:Math.sin(a)*sp,life:1,col:Math.random()<0.28?cols[(Math.random()*cols.length)|0]:col}); } };
+  const frame=now=>{
+    last=now;
+    ctx.clearRect(0,0,W(),H());
+    if(now>launchAt && now<stopAt){ launch(); if(big&&Math.random()<0.5) launch(); launchAt=now+(230+Math.random()*230); }
+    rockets=rockets.filter(r=>{ r.y+=r.vy; r.vy+=0.04; ctx.fillStyle=r.col; ctx.beginPath(); ctx.arc(r.x,r.y,2.4,0,7); ctx.fill(); if(r.y<=r.ty||r.vy>=0){ burst(r.x,r.y,r.col); return false; } return true; });
+    parts=parts.filter(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=0.045; p.vx*=0.99; p.life-=0.012; if(p.life<=0) return false; ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle=p.col; ctx.beginPath(); ctx.arc(p.x,p.y,2.5,0,7); ctx.fill(); return true; });
+    ctx.globalAlpha=1;
+    if(now<stopAt || parts.length || rockets.length){ TP_fxRaf=requestAnimationFrame(frame); }
+    else TP_stopFireworks();
+  };
+  TP_fxRaf=requestAnimationFrame(frame);
+}
+function TP_stopFireworks(){
+  if(TP_fxRaf){ cancelAnimationFrame(TP_fxRaf); TP_fxRaf=null; }
+  const cv=document.getElementById("tp-fx");
+  if(cv){ if(cv._resize) window.removeEventListener("resize",cv._resize); cv.remove(); }
 }
 
 
