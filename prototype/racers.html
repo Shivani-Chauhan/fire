@@ -1,0 +1,543 @@
+<title>ZipZap Racers — 2D Kart Demo</title>
+<style>
+  :root{
+    --bg:#080B14; --panel:#0F1525; --panel2:#161D35; --line:#1E2947;
+    --ink:#E8EAF6; --mut:#727ea8; --mut2:#4b5474;
+    --y:#FFE600; --pk:#FF3D71; --cy:#00E5FF; --gr:#00E096; --pu:#A855F7;
+    --road:#2b3350; --road2:#242c46; --grass:#0c1a13; --grass2:#0a1410;
+    --disp: 800 1em/1 -apple-system,"Segoe UI Semibold",system-ui,sans-serif;
+    --mono: ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --body: -apple-system,"Segoe UI",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:
+      radial-gradient(1200px 700px at 50% -10%, #101a33 0%, transparent 60%),
+      var(--bg);
+    color:var(--ink); font-family:var(--body); -webkit-tap-highlight-color:transparent;
+    min-height:100vh;}
+  .wrap{max-width:1120px; margin:0 auto; padding:26px 18px 60px;}
+
+  header.top{display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:18px;}
+  .brand{display:flex; align-items:baseline; gap:12px;}
+  .logo{font:900 30px/1 -apple-system,"Segoe UI",system-ui,sans-serif; letter-spacing:-.5px;}
+  .logo b{color:var(--y);}
+  .kicker{font-family:var(--mono); font-size:12px; letter-spacing:.16em; text-transform:uppercase; color:var(--mut);}
+  .sub{color:var(--mut); font-size:14px; max-width:52ch;}
+
+  /* ── stage ─────────────────────────────────────────── */
+  .stage{position:relative; width:100%; aspect-ratio:100/64; border-radius:18px; overflow:hidden;
+    background:var(--grass); border:1px solid var(--line);
+    box-shadow:0 30px 80px -30px #000, inset 0 0 0 1px #ffffff08;}
+  canvas#game{position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none;}
+
+  .hud{position:absolute; pointer-events:none; font-family:var(--mono);}
+  .hud-tl{top:12px; left:14px; display:flex; gap:10px; flex-wrap:wrap;}
+  .stat{background:#0b1020cc; backdrop-filter:blur(6px); border:1px solid var(--line);
+    border-radius:11px; padding:7px 12px; min-width:64px;}
+  .stat .k{font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--mut);}
+  .stat .v{font-size:20px; font-weight:800; font-variant-numeric:tabular-nums; line-height:1.15;}
+  .stat .v small{font-size:12px; color:var(--mut); font-weight:600;}
+
+  .board{top:12px; right:14px; width:220px; background:#0b1020d0; backdrop-filter:blur(6px);
+    border:1px solid var(--line); border-radius:13px; padding:10px 11px 11px;}
+  .board .bh{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;}
+  .board .bt{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--mut);}
+  .live{display:flex; align-items:center; gap:5px; font-size:10px; color:var(--gr); letter-spacing:.1em;}
+  .live i{width:6px; height:6px; border-radius:50%; background:var(--gr); box-shadow:0 0 8px var(--gr); animation:pulse 1.3s infinite;}
+  @keyframes pulse{50%{opacity:.35}}
+  .row{display:flex; align-items:center; gap:8px; padding:5px 6px; border-radius:8px; font-size:13px;}
+  .row+.row{margin-top:2px;}
+  .row.me{background:#ffffff0e; box-shadow:inset 0 0 0 1px #ffffff14;}
+  .row .pos{width:16px; text-align:right; color:var(--mut); font-variant-numeric:tabular-nums;}
+  .row .dot{width:11px; height:11px; border-radius:3px; flex:0 0 auto; box-shadow:0 0 8px currentColor;}
+  .row .nm{flex:1; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .row .lp{color:var(--mut); font-size:11px; font-variant-numeric:tabular-nums;}
+  .board .note{margin-top:9px; font-size:10.5px; line-height:1.4; color:var(--mut2); font-family:var(--body);}
+
+  .speed{position:absolute; left:50%; bottom:12px; transform:translateX(-50%); width:min(52%,320px);
+    background:#0b1020cc; border:1px solid var(--line); border-radius:11px; padding:7px 12px 9px;}
+  .speed .sl{display:flex; justify-content:space-between; font-size:10px; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--mut); margin-bottom:5px;}
+  .speed .sv{font-variant-numeric:tabular-nums; color:var(--y); font-weight:800;}
+  .bar{height:7px; border-radius:4px; background:#00000055; overflow:hidden;}
+  .bar i{display:block; height:100%; width:0%; border-radius:4px;
+    background:linear-gradient(90deg,var(--gr),var(--y) 70%,var(--pk)); transition:width .08s linear;}
+
+  /* overlays */
+  .overlay{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; gap:14px; background:#060912aa; backdrop-filter:blur(3px); pointer-events:auto;}
+  .overlay.hide{display:none;}
+  .ov-title{font:900 clamp(30px,6vw,58px)/.95 -apple-system,"Segoe UI",system-ui,sans-serif; letter-spacing:-1px;}
+  .ov-title b{color:var(--y);}
+  .ov-sub{color:var(--mut); font-size:14px; max-width:34ch; font-family:var(--body);}
+  .cta{pointer-events:auto; cursor:pointer; border:none; border-radius:12px; padding:14px 26px;
+    font:800 16px var(--body); background:var(--y); color:#000; letter-spacing:.01em;
+    box-shadow:0 10px 30px -8px #ffe6006b; transition:transform .1s;}
+  .cta:active{transform:translateY(1px);}
+  .cta:focus-visible{outline:3px solid var(--cy); outline-offset:3px;}
+  .count{font:900 clamp(70px,16vw,150px)/1 -apple-system,system-ui,sans-serif; color:var(--y);
+    text-shadow:0 0 60px #ffe60070;}
+  .fin-list{display:flex; flex-direction:column; gap:6px; width:min(340px,80%); font-family:var(--mono);}
+  .fin-row{display:flex; align-items:center; gap:10px; background:#0b1020cc; border:1px solid var(--line);
+    border-radius:10px; padding:9px 12px; font-size:14px;}
+  .fin-row .dot{width:12px;height:12px;border-radius:3px;box-shadow:0 0 8px currentColor;}
+  .fin-row .nm{flex:1; font-weight:700; text-align:left;}
+  .fin-row .tm{color:var(--mut); font-variant-numeric:tabular-nums;}
+
+  /* touch controls */
+  .touch{position:absolute; inset:0; pointer-events:none; display:none;}
+  .touch .pad{position:absolute; bottom:16px; width:74px; height:74px; border-radius:50%;
+    background:#0b1020b0; border:1px solid var(--line); color:var(--ink); pointer-events:auto;
+    display:flex; align-items:center; justify-content:center; font-size:30px; font-weight:800; user-select:none;}
+  .touch .pad:active{background:#ffffff1c;}
+  .touch .left{left:14px;} .touch .right{left:100px;}
+  .touch .gas{right:14px; background:#1c2a12b0;} .touch .brake{right:100px;}
+  body.istouch .touch{display:block;}
+  body.istouch .speed{bottom:auto; top:64px;}
+
+  /* explainer */
+  .legend{display:flex; gap:14px; flex-wrap:wrap; margin:16px 2px 0; color:var(--mut); font-size:13px;}
+  .legend b{color:var(--ink); font-weight:700;}
+  kbd{font-family:var(--mono); font-size:11px; background:var(--panel2); border:1px solid var(--line);
+    border-bottom-width:2px; border-radius:5px; padding:2px 7px; color:var(--ink);}
+
+  .cards{display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:26px;}
+  @media(max-width:720px){.cards{grid-template-columns:1fr;} .board{width:170px;}}
+  .card{background:linear-gradient(180deg,#0f1526,#0c111f); border:1px solid var(--line);
+    border-radius:14px; padding:16px 16px 17px;}
+  .card h3{margin:0 0 7px; font-size:14px; letter-spacing:.02em; display:flex; align-items:center; gap:8px;}
+  .card h3 i{width:9px;height:9px;border-radius:3px;box-shadow:0 0 8px currentColor;}
+  .card p{margin:0; font-size:13px; line-height:1.55; color:var(--mut);}
+  .card p b{color:var(--ink); font-weight:700;}
+  footer{margin-top:26px; color:var(--mut2); font-size:12px; line-height:1.6;}
+
+  @media (prefers-reduced-motion: reduce){ .live i{animation:none} .cta{transition:none} }
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="logo">Zip<b>Zap</b> Racers</div>
+      <span class="kicker">2D multiplayer kart · prototype</span>
+    </div>
+    <p class="sub">A look &amp; feel demo. You drive the yellow kart; the three rivals are bots standing in for real players — in true multiplayer each one is a friend in the room.</p>
+  </header>
+
+  <div class="stage" id="stage">
+    <canvas id="game"></canvas>
+
+    <div class="hud hud-tl">
+      <div class="stat"><div class="k">Lap</div><div class="v"><span id="lap">1</span><small>/3</small></div></div>
+      <div class="stat"><div class="k">Pos</div><div class="v"><span id="pos">1</span><small>/4</small></div></div>
+      <div class="stat"><div class="k">Time</div><div class="v" id="clock" style="font-size:16px">0.0</div></div>
+    </div>
+
+    <div class="hud board">
+      <div class="bh"><span class="bt">Race Board</span><span class="live"><i></i>LIVE</span></div>
+      <div id="rows"></div>
+      <div class="note">Rivals are simulated players. Real multiplayer syncs each kart over the network.</div>
+    </div>
+
+    <div class="hud speed">
+      <div class="sl"><span>Speed</span><span class="sv"><span id="kmh">0</span> km/h</span></div>
+      <div class="bar"><i id="sbar"></i></div>
+    </div>
+
+    <div class="touch" id="touch">
+      <div class="pad left"  data-k="left">‹</div>
+      <div class="pad right" data-k="right">›</div>
+      <div class="pad brake" data-k="down">⌄</div>
+      <div class="pad gas"   data-k="up">▲</div>
+    </div>
+
+    <div class="overlay" id="overlay">
+      <div class="ov-title">Zip<b>Zap</b> Racers</div>
+      <div class="ov-sub">Three laps. First across the line wins. Stay on the asphalt — grass slows you down.</div>
+      <button class="cta" id="startBtn">▶ Start race</button>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><b>Drive</b> <kbd>↑</kbd><kbd>↓</kbd><kbd>←</kbd><kbd>→</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span>
+    <span><b>Drift</b> <kbd>Space</kbd></span>
+    <span><b>Restart</b> <kbd>R</kbd></span>
+    <span>On phones, use the on-screen pads.</span>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <h3><i style="color:var(--y)"></i>What you're seeing</h3>
+      <p>A full top-down track, arcade kart physics, drift, boost strips, lap &amp; position tracking, and a <b>live race board</b> — exactly the HUD real multiplayer would use.</p>
+    </div>
+    <div class="card">
+      <h3><i style="color:var(--cy)"></i>What multiplayer adds</h3>
+      <p>Swap the three bots for real players over the network. Same screen, same board — each rival's kart is driven by a friend instead of the computer.</p>
+    </div>
+    <div class="card">
+      <h3><i style="color:var(--gr)"></i>Why it feels smooth</h3>
+      <p>Your kart always moves <b>instantly on your screen</b>; the network quietly reconciles the rivals. That's how ~80ms of real lag ends up feeling like none.</p>
+    </div>
+  </div>
+
+  <footer>
+    Prototype for ZipZap Games. Rival karts are AI standing in for networked players. Real-time sync would run on a game server (WebSocket/WebRTC) rather than the setup the word games use.
+  </footer>
+</div>
+
+<script>
+(() => {
+  const WORLD_W = 1000, WORLD_H = 640;
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  let scale = 1, dpr = 1;
+
+  // ── track ───────────────────────────────────────────
+  const CTRL = [
+    {x:150,y:330},{x:200,y:168},{x:400,y:108},{x:640,y:128},{x:862,y:200},
+    {x:902,y:398},{x:740,y:502},{x:500,y:452},{x:300,y:502},{x:160,y:440}
+  ];
+  const SPS = 48;
+  function catmull(pts, sps){
+    const r=[], n=pts.length;
+    for(let i=0;i<n;i++){
+      const p0=pts[(i-1+n)%n], p1=pts[i], p2=pts[(i+1)%n], p3=pts[(i+2)%n];
+      for(let t=0;t<sps;t++){
+        const s=t/sps, s2=s*s, s3=s2*s;
+        r.push({
+          x:0.5*((2*p1.x)+(-p0.x+p2.x)*s+(2*p0.x-5*p1.x+4*p2.x-p3.x)*s2+(-p0.x+3*p1.x-3*p2.x+p3.x)*s3),
+          y:0.5*((2*p1.y)+(-p0.y+p2.y)*s+(2*p0.y-5*p1.y+4*p2.y-p3.y)*s2+(-p0.y+3*p1.y-3*p2.y+p3.y)*s3)
+        });
+      }
+    }
+    return r;
+  }
+  const SAMP = catmull(CTRL, SPS);
+  const N = SAMP.length;
+  const ROAD_W = 82;
+  const tangents = SAMP.map((p,i)=>{
+    const q = SAMP[(i+1)%N]; let dx=q.x-p.x, dy=q.y-p.y;
+    const m=Math.hypot(dx,dy)||1; return {x:dx/m, y:dy/m};
+  });
+  // boost strips (indices along the loop)
+  const BOOSTS = [Math.floor(N*0.30), Math.floor(N*0.78)];
+
+  function nearest(x,y, hint){
+    let best=1e9, bi=0;
+    if(hint!=null){
+      const W=40;
+      for(let d=-W; d<=W; d++){
+        const i=((hint+d)%N+N)%N; const dx=SAMP[i].x-x, dy=SAMP[i].y-y;
+        const dd=dx*dx+dy*dy; if(dd<best){best=dd;bi=i;}
+      }
+      if(best < (ROAD_W*ROAD_W)) return {i:bi, dist:Math.sqrt(best)};
+    }
+    best=1e9;
+    for(let i=0;i<N;i++){ const dx=SAMP[i].x-x, dy=SAMP[i].y-y; const dd=dx*dx+dy*dy; if(dd<best){best=dd;bi=i;} }
+    return {i:bi, dist:Math.sqrt(best)};
+  }
+
+  // ── karts ───────────────────────────────────────────
+  const NAMES = ['YOU','Rev','Turbo','Nitro'];
+  const COLORS = ['#FFE600','#FF3D71','#00E5FF','#00E096'];
+  const karts = [];
+  function makeKarts(){
+    karts.length=0;
+    const t = tangents[2], p = SAMP[2];
+    const perp = {x:-t.y, y:t.x};
+    const layout=[[-1,0],[1,0],[-1,1],[1,1]];
+    for(let k=0;k<4;k++){
+      const [lat,back]=layout[k];
+      karts.push({
+        idx:k, name:NAMES[k], color:COLORS[k], isYou:k===0,
+        x:p.x - t.x*back*34 + perp.x*lat*20,
+        y:p.y - t.y*back*34 + perp.y*lat*20,
+        ang:Math.atan2(t.y,t.x), speed:0,
+        lastIdx:2, crossings:1, progress:N+2, place:k+1,
+        boostT:0, lapStart:0, finishT:0,
+        // bot params
+        biasLat:(Math.random()*2-1)*10, look:26+((Math.random()*10)|0),
+        skill:0.9+Math.random()*0.16
+      });
+    }
+  }
+
+  const MAX = 4.7, MAX_OFF = 2.0, ACC = 0.13, FR = 0.972, TURN = 0.052;
+  const keys = {up:false,down:false,left:false,right:false,drift:false};
+  const skids = [];
+  let state='ready';      // ready | countdown | racing | finished
+  let raceT=0, countVal=3, countT=0, winner=null, finishOrder=[];
+
+  function resetRace(){
+    makeKarts(); skids.length=0; raceT=0; winner=null; finishOrder.length=0;
+    state='countdown'; countVal=3; countT=0;
+    overlay.classList.add('hide');
+  }
+
+  function botControl(k, dt){
+    // aim a lookahead point along the centreline
+    const ti = (k.lastIdx + k.look) % N;
+    const perp = {x:-tangents[k.lastIdx].y, y:tangents[k.lastIdx].x};
+    const tx = SAMP[ti].x + perp.x*k.biasLat, ty = SAMP[ti].y + perp.y*k.biasLat;
+    let desired = Math.atan2(ty-k.y, tx-k.x);
+    let da = ((desired - k.ang + Math.PI*3)%(Math.PI*2)) - Math.PI;
+    k.ang += Math.max(-TURN*1.1, Math.min(TURN*1.1, da)) * dt;
+    // throttle: ease off on sharp turns; rubber-band toward the pack
+    const sharp = Math.min(1, Math.abs(da)*1.6);
+    let target = MAX * k.skill * (1 - sharp*0.33);
+    const lead = k.progress - karts[0].progress;
+    if(lead < -60) target *= 1.06; else if(lead > 80) target *= 0.95;
+    k.speed += (target - k.speed) * 0.06 * dt;
+  }
+
+  function youControl(k, dt){
+    if(keys.up)   k.speed += ACC*dt;
+    if(keys.down) k.speed -= ACC*1.1*dt;
+    const steer = (keys.left?-1:0)+(keys.right?1:0);
+    const grip = keys.drift ? 1.7 : 1.0;
+    k.ang += steer * TURN * grip * Math.min(1, Math.abs(k.speed)/1.4) * (k.speed<0?-1:1) * dt;
+  }
+
+  function step(dt){
+    for(const k of karts){
+      if(state==='racing'){ k.isYou ? youControl(k,dt) : botControl(k,dt); }
+      // surface
+      const nr = nearest(k.x, k.y, k.lastIdx);
+      const onRoad = nr.dist < ROAD_W*0.5 + 6;
+      const cap = onRoad ? MAX : MAX_OFF;
+      // boost strips
+      let onBoost=false;
+      for(const b of BOOSTS){ let d=Math.abs(nr.i-b); d=Math.min(d,N-d); if(d<10 && onRoad) onBoost=true; }
+      if(onBoost){ k.speed += 0.06*dt; k.boostT=0.5; }
+      k.boostT=Math.max(0,k.boostT-0.016*dt);
+      const capUse = cap + (k.boostT>0?1.5:0);
+      k.speed *= Math.pow(onRoad?FR:0.945, dt);
+      if(k.speed>capUse) k.speed += (capUse-k.speed)*0.1*dt;
+      if(k.speed<-1.4) k.speed=-1.4;
+      // move
+      k.x += Math.cos(k.ang)*k.speed*dt;
+      k.y += Math.sin(k.ang)*k.speed*dt;
+      // keep in field
+      k.x=Math.max(20,Math.min(WORLD_W-20,k.x)); k.y=Math.max(20,Math.min(WORLD_H-20,k.y));
+      // skid marks
+      if(Math.abs(k.speed)>2.4 && (!onRoad || keys.drift && k.isYou) && Math.random()<0.5*dt){
+        skids.push({x:k.x,y:k.y,a:0.5}); if(skids.length>260) skids.shift();
+      }
+      // progress / laps
+      const d = nr.i - k.lastIdx;
+      if(d < -N*0.5) { k.crossings++; if(k.crossings>1) {/*lap done*/} }
+      else if(d > N*0.5) k.crossings--;
+      k.lastIdx = nr.i;
+      k.progress = k.crossings*N + nr.i;
+      if(state==='racing' && !k.finishT && k.crossings>3){ k.finishT=raceT; finishOrder.push(k); if(!winner){ winner=k; finishRace(); } }
+    }
+    // kart-vs-kart soft collisions (bumper feel)
+    for(let a=0;a<karts.length;a++) for(let b=a+1;b<karts.length;b++){
+      const A=karts[a],B=karts[b]; let dx=B.x-A.x, dy=B.y-A.y; const dist=Math.hypot(dx,dy);
+      const min=24; if(dist>0 && dist<min){ const o=(min-dist)/2, nx=dx/dist, ny=dy/dist;
+        A.x-=nx*o; A.y-=ny*o; B.x+=nx*o; B.y+=ny*o;
+        const avg=(A.speed+B.speed)/2; A.speed=avg*0.9; B.speed=avg*0.9;
+      }
+    }
+    // ranking
+    const order=[...karts].sort((p,q)=>q.progress-p.progress);
+    order.forEach((k,i)=>k.place=i+1);
+  }
+
+  function finishRace(){
+    state='finished';
+    // fill any unfinished into order by progress
+    const rest=[...karts].filter(k=>!finishOrder.includes(k)).sort((a,b)=>b.progress-a.progress);
+    finishOrder=[...finishOrder,...rest];
+    confettiBurst();
+    showFinish();
+  }
+
+  // ── drawing ─────────────────────────────────────────
+  function drawTrack(){
+    // grass
+    const g=ctx.createLinearGradient(0,0,0,WORLD_H);
+    g.addColorStop(0,'#0e1c14'); g.addColorStop(1,'#0a1410');
+    ctx.fillStyle=g; ctx.fillRect(0,0,WORLD_W,WORLD_H);
+    // subtle grass texture rings
+    ctx.strokeStyle='#12241a'; ctx.lineWidth=ROAD_W+64;
+    tracePath(); ctx.stroke();
+    // kerb outline
+    ctx.strokeStyle='#0a0e18'; ctx.lineWidth=ROAD_W+12; ctx.lineJoin='round'; ctx.lineCap='round';
+    tracePath(); ctx.stroke();
+    // asphalt
+    ctx.strokeStyle=getCss('--road'); ctx.lineWidth=ROAD_W; tracePath(); ctx.stroke();
+    ctx.strokeStyle='#ffffff09'; ctx.lineWidth=ROAD_W-8; tracePath(); ctx.stroke();
+    // centre dashes
+    ctx.strokeStyle='#ffffff33'; ctx.lineWidth=3; ctx.setLineDash([16,20]); tracePath(); ctx.stroke(); ctx.setLineDash([]);
+    // boost strips
+    for(const b of BOOSTS) drawBoost(b);
+    // start/finish
+    drawStart();
+  }
+  function tracePath(){
+    ctx.beginPath(); ctx.moveTo(SAMP[0].x,SAMP[0].y);
+    for(let i=1;i<N;i++) ctx.lineTo(SAMP[i].x,SAMP[i].y); ctx.closePath();
+  }
+  function drawBoost(bi){
+    const t=tangents[bi], p=SAMP[bi], perp={x:-t.y,y:t.x};
+    for(let j=-2;j<=2;j++){
+      const cx=p.x+t.x*j*13, cy=p.y+t.y*j*13;
+      ctx.strokeStyle='rgba(0,229,255,'+(0.5-Math.abs(j)*0.07)+')'; ctx.lineWidth=4; ctx.lineCap='round';
+      ctx.beginPath();
+      ctx.moveTo(cx-perp.x*22 - t.x*7, cy-perp.y*22 - t.y*7);
+      ctx.lineTo(cx + t.x*7, cy + t.y*7);
+      ctx.lineTo(cx+perp.x*22 - t.x*7, cy+perp.y*22 - t.y*7);
+      ctx.stroke();
+    }
+  }
+  function drawStart(){
+    const i=1, t=tangents[i], p=SAMP[i], perp={x:-t.y,y:t.x};
+    const half=ROAD_W/2, rows=2, cell=half/2;
+    for(let r=0;r<rows;r++) for(let c=-2;c<2;c++){
+      ctx.fillStyle=((r+c)&1)?'#e9ecf5':'#0c1120';
+      const bx=p.x + t.x*(r*11) + perp.x*(c*cell+cell/2);
+      const by=p.y + t.y*(r*11) + perp.y*(c*cell+cell/2);
+      ctx.save(); ctx.translate(bx,by); ctx.rotate(Math.atan2(t.y,t.x)); ctx.fillRect(-5.5,-cell/2,11,cell); ctx.restore();
+    }
+  }
+  function drawKart(k){
+    ctx.save(); ctx.translate(k.x,k.y); ctx.rotate(k.ang);
+    if(k.boostT>0){ ctx.fillStyle='rgba(0,229,255,.5)'; ctx.beginPath(); ctx.ellipse(-16,0,10,5,0,0,7); ctx.fill(); }
+    // wheels
+    ctx.fillStyle='#0a0d15';
+    ctx.fillRect(-11,-11,8,5); ctx.fillRect(-11,6,8,5); ctx.fillRect(6,-11,8,5); ctx.fillRect(6,6,8,5);
+    // body
+    ctx.shadowColor=k.color; ctx.shadowBlur=12;
+    roundRect(-13,-8,26,16,5); ctx.fillStyle=k.color; ctx.fill();
+    ctx.shadowBlur=0;
+    // cockpit
+    roundRect(-3,-5.5,9,11,3); ctx.fillStyle='rgba(8,11,20,.82)'; ctx.fill();
+    // nose highlight
+    ctx.fillStyle='rgba(255,255,255,.28)'; roundRect(8,-6,4,12,2); ctx.fill();
+    ctx.restore();
+    // name tag (screen-aligned)
+    ctx.font='700 11px '+getCss('--mono');
+    const w=ctx.measureText(k.name).width+12;
+    ctx.fillStyle='#0b1020cc'; roundRect(k.x-w/2,k.y-26,w,14,4); ctx.fill();
+    ctx.fillStyle=k.isYou?k.color:'#c9d2ee'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(k.name, k.x, k.y-18.5);
+  }
+
+  const confetti=[];
+  function confettiBurst(){
+    for(let i=0;i<120;i++) confetti.push({
+      x:WORLD_W/2, y:WORLD_H/2, vx:(Math.random()*2-1)*5, vy:(Math.random()*2-1)*5-2,
+      c:COLORS[(Math.random()*4)|0], life:1, r:2+Math.random()*3
+    });
+  }
+  function drawConfetti(dt){
+    for(let i=confetti.length-1;i>=0;i--){ const p=confetti[i];
+      p.x+=p.vx*dt; p.y+=p.vy*dt; p.vy+=0.09*dt; p.life-=0.008*dt;
+      if(p.life<=0){confetti.splice(i,1);continue;}
+      ctx.globalAlpha=Math.max(0,p.life); ctx.fillStyle=p.c; ctx.fillRect(p.x,p.y,p.r,p.r); ctx.globalAlpha=1;
+    }
+  }
+
+  function roundRect(x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+  const cssCache={};
+  function getCss(v){ return cssCache[v] || (cssCache[v]=getComputedStyle(document.documentElement).getPropertyValue(v).trim()); }
+
+  // ── HUD ─────────────────────────────────────────────
+  const rowsEl=document.getElementById('rows');
+  const lapEl=document.getElementById('lap'), posEl=document.getElementById('pos');
+  const clockEl=document.getElementById('clock'), kmhEl=document.getElementById('kmh'), sbar=document.getElementById('sbar');
+  let hudT=0;
+  function updateHUD(){
+    const you=karts[0];
+    lapEl.textContent=Math.min(3,you.crossings);
+    posEl.textContent=you.place;
+    clockEl.textContent=raceT.toFixed(1);
+    const kmh=Math.round(Math.abs(you.speed)/MAX*180);
+    kmhEl.textContent=kmh; sbar.style.width=Math.min(100,Math.abs(you.speed)/MAX*100)+'%';
+    const order=[...karts].sort((a,b)=>a.place-b.place);
+    rowsEl.innerHTML=order.map(k=>`<div class="row ${k.isYou?'me':''}">
+      <span class="pos">${k.place}</span>
+      <span class="dot" style="color:${k.color};background:${k.color}"></span>
+      <span class="nm" style="${k.isYou?'color:'+k.color:''}">${k.name}${k.isYou?'':''}</span>
+      <span class="lp">L${Math.min(3,k.crossings)}</span></div>`).join('');
+  }
+
+  // ── overlays ────────────────────────────────────────
+  const overlay=document.getElementById('overlay');
+  const startBtn=document.getElementById('startBtn');
+  function showFinish(){
+    const medal=['🥇','🥈','🥉','4️⃣'];
+    overlay.classList.remove('hide');
+    overlay.innerHTML=`
+      <div class="ov-title">${winner.isYou?'You <b>win!</b>':winner.name+' <b>wins!</b>'}</div>
+      <div class="fin-list">${finishOrder.map((k,i)=>`
+        <div class="fin-row"><span>${medal[i]}</span>
+          <span class="dot" style="color:${k.color};background:${k.color}"></span>
+          <span class="nm" style="${k.isYou?'color:'+k.color:''}">${k.name}</span>
+          <span class="tm">${k.finishT?k.finishT.toFixed(1)+'s':'DNF'}</span></div>`).join('')}</div>
+      <button class="cta" id="againBtn">↻ Race again</button>`;
+    document.getElementById('againBtn').onclick=resetRace;
+  }
+  startBtn.onclick=resetRace;
+
+  // ── loop ────────────────────────────────────────────
+  let last=performance.now();
+  function frame(now){
+    let dt=(now-last)/16.67; last=now; dt=Math.max(0.2,Math.min(3,dt));
+    // countdown timing (seconds): 3 → 2 → 1 → GO
+    if(state==='countdown'){ countT+=dt/60; if(countT>=0.85){ countT=0; countVal--; if(countVal<0){ state='racing'; } } }
+    if(state==='racing'){ raceT+=dt/60; }
+    step(state==='ready'?0:dt);
+
+    // render
+    ctx.setTransform(dpr*scale,0,0,dpr*scale,0,0);
+    ctx.clearRect(0,0,WORLD_W,WORLD_H);
+    drawTrack();
+    // skids
+    for(const s of skids){ ctx.globalAlpha=s.a*0.5; ctx.fillStyle='#05070c'; ctx.fillRect(s.x-2,s.y-2,4,4); }
+    ctx.globalAlpha=1;
+    for(const k of karts) drawKart(k);
+    if(state==='finished') drawConfetti(dt);
+
+    // countdown text
+    if(state==='countdown'){
+      ctx.fillStyle='#060912aa'; ctx.fillRect(0,0,WORLD_W,WORLD_H);
+      ctx.fillStyle=getCss('--y'); ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.font='900 130px -apple-system,system-ui,sans-serif';
+      ctx.shadowColor=getCss('--y'); ctx.shadowBlur=40;
+      ctx.fillText(countVal>0?countVal:'GO!', WORLD_W/2, WORLD_H/2); ctx.shadowBlur=0;
+    }
+
+    hudT+=dt; if(hudT>3){ updateHUD(); hudT=0; }
+    requestAnimationFrame(frame);
+  }
+
+  // ── input ───────────────────────────────────────────
+  const KMAP={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',
+    w:'up',s:'down',a:'left',d:'right',' ':'drift'};
+  addEventListener('keydown',e=>{
+    const k=KMAP[e.key]; if(k){ keys[k]=true; e.preventDefault(); }
+    if(e.key==='r'||e.key==='R') resetRace();
+  });
+  addEventListener('keyup',e=>{ const k=KMAP[e.key]; if(k){ keys[k]=false; e.preventDefault(); } });
+  // touch pads
+  if(matchMedia('(pointer:coarse)').matches) document.body.classList.add('istouch');
+  document.querySelectorAll('.touch .pad').forEach(pad=>{
+    const k=pad.dataset.k;
+    const on=e=>{keys[k]=true; e.preventDefault();}, off=e=>{keys[k]=false; e.preventDefault();};
+    pad.addEventListener('pointerdown',on); pad.addEventListener('pointerup',off);
+    pad.addEventListener('pointerleave',off); pad.addEventListener('pointercancel',off);
+  });
+
+  // ── resize ──────────────────────────────────────────
+  function resize(){
+    const r=canvas.getBoundingClientRect(); dpr=Math.min(2,window.devicePixelRatio||1);
+    canvas.width=r.width*dpr; canvas.height=r.height*dpr; scale=r.width/WORLD_W;
+  }
+  addEventListener('resize',resize);
+
+  makeKarts(); resize(); updateHUD();
+  requestAnimationFrame(frame);
+})();
+</script>
