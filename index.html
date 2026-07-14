@@ -124,6 +124,7 @@ body{background:var(--bg);color:var(--te);font-family:'Nunito',sans-serif;min-he
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap');
 /* When typing test is active, widen the whole app for more words per line */
 body.typing-mode #app{max-width:960px}
+body.race-mode #app{max-width:1120px}
 .type-optgroup{display:flex;gap:2px;background:var(--ca2);border-radius:10px;padding:4px}
 .type-opt{padding:7px 14px;border-radius:7px;cursor:pointer;font-weight:700;color:var(--mu);
   transition:color .12s;user-select:none;font-family:'JetBrains Mono',monospace;font-size:13px}
@@ -2471,17 +2472,18 @@ function render(){
 function renderRace(){
   const app=document.getElementById("app");if(!app)return;
   document.body.classList.remove("typing-mode");
+  document.body.classList.add("race-mode");
   app.innerHTML=`
-    <div style="padding-top:16px">
-      <button class="btn" id="race-back" style="background:var(--ca2);color:var(--mu);border:1px solid var(--bd);width:auto;padding:8px 16px;font-size:13px;margin-bottom:12px">← Back</button>
+    <div style="padding-top:12px">
+      <button class="btn" id="race-back" style="background:var(--ca2);color:var(--mu);border:1px solid var(--bd);width:auto;padding:8px 16px;font-size:13px;margin-bottom:10px">← Back</button>
       <iframe id="race-frame" title="ZipZap Racers" allow="autoplay"
-        style="width:100%;height:calc(100vh - 96px);min-height:520px;border:1px solid var(--bd);border-radius:16px;display:block;background:#080B14"></iframe>
+        style="width:100%;height:calc(100vh - 90px);min-height:540px;border:1px solid var(--bd);border-radius:16px;display:block;background:#080B14"></iframe>
     </div>`;
   const tpl=document.getElementById("racer-doc");
   const f=document.getElementById("race-frame");
   if(tpl&&f) f.srcdoc=tpl.innerHTML;
   const back=document.getElementById("race-back");
-  if(back) back.onclick=()=>{ const fr=document.getElementById("race-frame"); if(fr) fr.srcdoc="about:blank"; currentGame=null; render(); };
+  if(back) back.onclick=()=>{ const fr=document.getElementById("race-frame"); if(fr) fr.srcdoc="about:blank"; document.body.classList.remove("race-mode"); currentGame=null; render(); };
 }
 
 render();
@@ -2541,26 +2543,25 @@ render();
   .bar{height:7px;border-radius:4px;background:#00000055;overflow:hidden;}
   .bar i{display:block;height:100%;width:0%;border-radius:4px;background:linear-gradient(90deg,var(--gr),var(--y) 70%,var(--pk));transition:width .08s linear;}
 
-  /* item slot + fire */
-  .item{position:absolute;right:14px;bottom:12px;display:flex;align-items:center;gap:10px;pointer-events:none;}
-  .slot{width:64px;height:64px;border-radius:14px;background:#0b1020cc;border:1px solid var(--line);
-    display:flex;align-items:center;justify-content:center;font-size:32px;position:relative;overflow:hidden;}
+  /* item slot — small, tucked in the top-left with the stats (never over the road) */
+  .item{top:70px;left:14px;display:flex;align-items:center;gap:8px;}
+  .slot{width:46px;height:46px;border-radius:11px;background:#0b1020cc;border:1px solid var(--line);
+    display:flex;align-items:center;justify-content:center;font-size:24px;position:relative;overflow:hidden;}
   .slot.spin{animation:slotspin .5s linear infinite;}
   @keyframes slotspin{0%{filter:hue-rotate(0)}100%{filter:hue-rotate(360deg)}}
-  .slot .lbl{position:absolute;bottom:3px;left:0;right:0;text-align:center;font-family:var(--mono);font-size:8px;letter-spacing:.1em;color:var(--mut);text-transform:uppercase;}
-  .firebtn{pointer-events:auto;width:64px;height:64px;border-radius:50%;border:none;cursor:pointer;
-    background:radial-gradient(circle at 35% 30%,#ff6a3d,#e01f5a);color:#fff;font:800 12px var(--body);
-    letter-spacing:.08em;box-shadow:0 8px 22px -6px #ff3d7188;display:none;}
-  body.istouch .firebtn{display:block;}
-  .firebtn:active{transform:translateY(1px);}
+  .slot .lbl{position:absolute;bottom:2px;left:0;right:0;text-align:center;font-family:var(--mono);font-size:7px;letter-spacing:.08em;color:var(--mut);text-transform:uppercase;}
 
-  /* touch pads */
-  .touch{position:absolute;inset:0;pointer-events:none;display:none;}
-  .touch .pad{position:absolute;bottom:84px;width:66px;height:66px;border-radius:50%;background:#0b1020b0;border:1px solid var(--line);color:var(--ink);pointer-events:auto;display:flex;align-items:center;justify-content:center;font-size:26px;font-weight:800;user-select:none;}
-  .touch .pad:active{background:#ffffff1c;}
-  .touch .left{left:14px;} .touch .right{left:92px;}
-  .touch .gas{left:14px;bottom:14px;background:#1c2a12b0;} .touch .brake{left:92px;bottom:14px;}
-  body.istouch .touch{display:block;}
+  /* control bar BELOW the track — no obstruction of the road */
+  .padbar{display:none;margin-top:12px;align-items:center;justify-content:space-between;gap:10px;}
+  body.istouch .padbar{display:flex;}
+  .padbar .cluster{display:flex;gap:12px;}
+  .padbar .pad{width:66px;height:66px;border-radius:16px;background:var(--panel2);border:1px solid var(--line);color:var(--ink);display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;user-select:none;touch-action:none;}
+  .padbar .pad:active{background:#ffffff1c;}
+  .padbar .gas{background:#16240f;border-color:#2a4a1a;}
+  .firebtn{width:72px;height:72px;border-radius:50%;border:none;cursor:pointer;
+    background:radial-gradient(circle at 35% 30%,#ff6a3d,#e01f5a);color:#fff;font:800 13px var(--body);
+    letter-spacing:.08em;box-shadow:0 8px 22px -6px #ff3d7188;touch-action:none;}
+  .firebtn:active{transform:translateY(1px);}
 
   /* screens */
   .screen{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -2601,7 +2602,12 @@ render();
   .legend b{color:var(--ink);}
   kbd{font-family:var(--mono);font-size:11px;background:var(--panel2);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:2px 7px;color:var(--ink);}
   .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:24px;}
-  @media(max-width:720px){.cards{grid-template-columns:1fr;}.board{width:150px;}}
+  @media(max-width:720px){
+    .wrap{padding:12px 12px 26px;}
+    .sub{display:none;} .legend{display:none;} .cards{display:none;} footer{display:none;}
+    .board{width:150px;padding:8px 9px 9px;} .board .row{font-size:12px;padding:4px 5px;}
+    .stat{padding:6px 10px;min-width:52px;} .stat .v{font-size:18px;}
+  }
   .card{background:linear-gradient(180deg,#0f1526,#0c111f);border:1px solid var(--line);border-radius:14px;padding:15px 16px 16px;}
   .card h3{margin:0 0 7px;font-size:14px;display:flex;align-items:center;gap:8px;} .card h3 i{width:9px;height:9px;border-radius:3px;box-shadow:0 0 8px currentColor;}
   .card p{margin:0;font-size:13px;line-height:1.55;color:var(--mut);} .card p b{color:var(--ink);}
@@ -2637,16 +2643,8 @@ render();
       <div class="bar"><i id="sbar"></i></div>
     </div>
 
-    <div class="item" id="itemHud" style="display:none">
+    <div class="hud item" id="itemHud" style="display:none">
       <div class="slot" id="slot"><span id="slotIcon"></span><span class="lbl" id="slotLbl">empty</span></div>
-      <button class="firebtn" id="fireBtn">FIRE</button>
-    </div>
-
-    <div class="touch" id="touch">
-      <div class="pad left" data-k="left">‹</div>
-      <div class="pad right" data-k="right">›</div>
-      <div class="pad brake" data-k="down">⌄</div>
-      <div class="pad gas" data-k="up">▲</div>
     </div>
 
     <!-- MENU -->
@@ -2676,6 +2674,19 @@ render();
 
     <!-- OVERLAY (countdown / finish) -->
     <div class="screen hide" id="overlay"></div>
+  </div>
+
+  <!-- touch control bar (below the track, shown only on touch devices) -->
+  <div class="padbar" id="padbar">
+    <div class="cluster">
+      <div class="pad" data-k="left">‹</div>
+      <div class="pad" data-k="right">›</div>
+    </div>
+    <button class="firebtn" id="fireBtn">FIRE</button>
+    <div class="cluster">
+      <div class="pad" data-k="down">⌄</div>
+      <div class="pad gas" data-k="up">▲</div>
+    </div>
   </div>
 
   <div class="legend">
@@ -3016,7 +3027,7 @@ render();
   });
   addEventListener('keyup',e=>{const k=KMAP[e.key];if(k){keys[k]=false;e.preventDefault();}});
   if(matchMedia('(pointer:coarse)').matches)document.body.classList.add('istouch');
-  document.querySelectorAll('.touch .pad').forEach(pad=>{const k=pad.dataset.k;const on=e=>{keys[k]=true;e.preventDefault();},off=e=>{keys[k]=false;e.preventDefault();};pad.addEventListener('pointerdown',on);pad.addEventListener('pointerup',off);pad.addEventListener('pointerleave',off);pad.addEventListener('pointercancel',off);});
+  document.querySelectorAll('.padbar .pad').forEach(pad=>{const k=pad.dataset.k;const on=e=>{keys[k]=true;e.preventDefault();},off=e=>{keys[k]=false;e.preventDefault();};pad.addEventListener('pointerdown',on);pad.addEventListener('pointerup',off);pad.addEventListener('pointerleave',off);pad.addEventListener('pointercancel',off);});
   $('fireBtn').addEventListener('pointerdown',e=>{e.preventDefault();const me=karts.find(x=>x.id===myId);if(me)useItem(me);});
 
   function resize(){const r=canvas.getBoundingClientRect();dpr=Math.min(2,window.devicePixelRatio||1);canvas.width=r.width*dpr;canvas.height=r.height*dpr;scale=r.width/WORLD_W;}
