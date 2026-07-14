@@ -2523,7 +2523,8 @@ render();
   .stat .v{font-size:20px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.15;}
   .stat .v small{font-size:12px;color:var(--mut);font-weight:600;}
 
-  .board{top:12px;right:14px;width:214px;background:#0b1020d0;backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:13px;padding:10px 11px 11px;}
+  .stagewrap{position:relative;}
+  .board{position:absolute;top:12px;right:14px;width:214px;pointer-events:none;font-family:var(--mono);background:#0b1020d0;backdrop-filter:blur(6px);border:1px solid var(--line);border-radius:13px;padding:10px 11px 11px;z-index:3;}
   .board .bh{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
   .board .bt{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);}
   .live{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--gr);letter-spacing:.1em;}
@@ -2550,6 +2551,14 @@ render();
   .slot.spin{animation:slotspin .5s linear infinite;}
   @keyframes slotspin{0%{filter:hue-rotate(0)}100%{filter:hue-rotate(360deg)}}
   .slot .lbl{position:absolute;bottom:2px;left:0;right:0;text-align:center;font-family:var(--mono);font-size:7px;letter-spacing:.08em;color:var(--mut);text-transform:uppercase;}
+
+  /* On touch devices the board leaves the track and becomes a strip below it */
+  body.istouch .board{position:static;width:auto;margin-top:10px;pointer-events:auto;}
+  body.istouch .board .bh{margin-bottom:7px;}
+  body.istouch #rows{display:flex;flex-wrap:wrap;gap:6px;}
+  body.istouch .board .row{flex:0 0 auto;background:#0b1020cc;border:1px solid var(--line);padding:5px 9px;}
+  body.istouch .board .row+.row{margin-top:0;}
+  body.istouch .board .row .lp{margin-left:2px;}
 
   /* control bar BELOW the track — no obstruction of the road */
   .padbar{display:none;margin-top:12px;align-items:center;justify-content:space-between;gap:10px;}
@@ -2624,6 +2633,7 @@ render();
     <p class="sub">Race friends in real time, or practice against bots. Grab item boxes, fire missiles, drop mines — first across the line after 3 laps wins.</p>
   </header>
 
+  <div class="stagewrap">
   <div class="stage" id="stage">
     <canvas id="game"></canvas>
 
@@ -2631,11 +2641,6 @@ render();
       <div class="stat"><div class="k">Lap</div><div class="v"><span id="lap">1</span><small>/3</small></div></div>
       <div class="stat"><div class="k">Pos</div><div class="v"><span id="pos">1</span><small id="posOf">/4</small></div></div>
       <div class="stat"><div class="k">Time</div><div class="v" id="clock" style="font-size:16px">0.0</div></div>
-    </div>
-
-    <div class="hud board" id="board" style="display:none">
-      <div class="bh"><span class="bt">Race Board</span><span class="live"><i></i><span id="liveLbl">LIVE</span></span></div>
-      <div id="rows"></div>
     </div>
 
     <div class="hud speed" id="speedHud" style="display:none">
@@ -2675,6 +2680,13 @@ render();
     <!-- OVERLAY (countdown / finish) -->
     <div class="screen hide" id="overlay"></div>
   </div>
+
+  <!-- Race board: overlays the top-right on wide screens, drops to a strip below the track on narrow/touch -->
+  <div class="board" id="board" style="display:none">
+    <div class="bh"><span class="bt">Race Board</span><span class="live"><i></i><span id="liveLbl">LIVE</span></span></div>
+    <div id="rows"></div>
+  </div>
+  </div><!-- /stagewrap -->
 
   <!-- touch control bar (below the track, shown only on touch devices) -->
   <div class="padbar" id="padbar">
@@ -2984,7 +2996,8 @@ render();
   // ── screens ─────────────────────────────────────────
   function showScreen(id){for(const s of ['menu','lobby','overlay'])$(s).classList.toggle('hide',s!==id);}
   function showFinish(){
-    showHUD(true); const medal=['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣'];
+    showHUD(true); $('board').style.display='none'; // finished screen shows full standings itself
+    const medal=['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣'];
     const ov=$('overlay'); ov.classList.remove('hide');
     const canRestart = MODE==='practice' || NET.isHost;
     ov.innerHTML=`<div class="ov-title">${winner.id===myId?'You <b>win!</b>':esc(winner.name)+' <b>wins!</b>'}</div>
