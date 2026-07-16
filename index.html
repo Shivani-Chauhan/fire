@@ -214,6 +214,26 @@ body.typing-mode #app{max-width:960px}
 .tp-winner .tp-winsub small{color:var(--mu)}
 @keyframes trophyPop{0%{transform:scale(0) rotate(-30deg)}70%{transform:scale(1.25) rotate(8deg)}100%{transform:scale(1) rotate(0)}}
 #tp-fx{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:9998}
+/* ── BLUFF (card game) ─────────────────────────────── */
+.bl-card{display:inline-flex;flex-direction:column;justify-content:space-between;width:44px;height:62px;border-radius:7px;background:#f4f6fb;color:#141414;font-weight:900;padding:4px 5px;box-shadow:0 2px 7px #0007;user-select:none;cursor:pointer;transition:transform .08s;font-family:'Nunito',sans-serif}
+.bl-card.red{color:#d11d3b}
+.bl-card .r{font-size:15px;line-height:1}
+.bl-card .s{font-size:16px;line-height:1;align-self:flex-end}
+.bl-card.sel{outline:3px solid var(--y);transform:translateY(-10px)}
+.bl-card.back{background:repeating-linear-gradient(45deg,#20408f,#20408f 6px,#18306e 6px,#18306e 12px);border:1px solid #2c4fb0;color:transparent;cursor:default;box-shadow:0 2px 7px #0009}
+.bl-card.sm{width:30px;height:42px;padding:3px 4px;border-radius:5px}
+.bl-card.sm .r{font-size:11px}.bl-card.sm .s{font-size:11px}
+.bl-hand{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
+.bl-rankbtn{min-width:40px;padding:9px 6px;border-radius:9px;background:var(--ca2);border:2px solid var(--bd);color:var(--te);font-weight:900;font-size:15px;cursor:pointer;font-family:'Nunito',sans-serif}
+.bl-rankbtn.on{border-color:var(--gr);color:var(--gr)}
+.bl-pile{display:flex;align-items:center;justify-content:center;min-height:74px;position:relative}
+.bl-pile .bl-card{position:absolute}
+.bl-pbadge{position:absolute;right:-6px;top:-6px;background:var(--gr);color:#000;font-size:12px;font-weight:900;border-radius:20px;padding:2px 9px}
+.bl-log{background:var(--ca2);border:1px solid var(--bd);border-radius:10px;padding:8px 12px;font-size:12px;color:var(--mu);line-height:1.7;max-height:96px;overflow-y:auto}
+.bl-pbar{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.bl-pchip{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 10px;border-radius:12px;border:1px solid var(--bd);background:var(--ca2)}
+.bl-pchip.turn{border-color:var(--gr);box-shadow:0 0 14px rgba(0,224,150,.35)}
+.bl-pchip.out{opacity:.4}
 </style>
 </head>
 <body>
@@ -2349,6 +2369,284 @@ function zzCelebrationClear(){ zzStopFireworks(); zzFxKey=null; }
 
 
 // ═══════════════════════════════════════════════════════
+// BLUFF  (classic card game — host-authoritative)
+//  • starter picks the rank; everyone plays that same rank
+//  • only the next player may call Bluff on the play before them
+//  • passing allowed; loser of a challenge takes the whole pile
+//  • first to empty their hand wins, last one holding loses
+// ═══════════════════════════════════════════════════════
+const BL_ROOT="bluff_v1";
+const BL_RANKS=["2","3","4","5","6","7","8","9","T","J","Q","K","A"];
+const BL_SUITS=["S","H","D","C"];
+const BL_SUITSYM={S:"♠",H:"♥",D:"♦",C:"♣"};
+const BL_RANKLBL={A:"Aces",K:"Kings",Q:"Queens",J:"Jacks",T:"Tens","9":"Nines","8":"Eights","7":"Sevens","6":"Sixes","5":"Fives","4":"Fours","3":"Threes","2":"Twos"};
+const BL_rankOf=c=>c.slice(0,-1);
+const BL_suitOf=c=>c.slice(-1);
+const BL_rankDisp=r=>r==="T"?"10":r;
+let BL_sel=[];        // client: selected card ids
+let BL_pickRank=null; // client: chosen rank when starting a pile
+let BL_revealTimer=null;
+
+const BL_stRef=()=>db.ref(`${BL_ROOT}/${roomCode}/state`);
+const BL_acRef=()=>db.ref(`${BL_ROOT}/${roomCode}/actions`);
+const BL_myAcRef=()=>db.ref(`${BL_ROOT}/${roomCode}/actions/${myId}`);
+const BL_clean=r=>!r?null:{...r,
+  players:toArr(r.players).map(p=>({...p,hand:toArr(p.hand)})),
+  pile:toArr(r.pile).map(pl=>({...pl,cards:toArr(pl.cards)})),
+  finishOrder:toArr(r.finishOrder), log:toArr(r.log),
+  reveal:r.reveal?{...r.reveal,cards:toArr(r.reveal.cards)}:null};
+
+function BL_deck(){const d=[];for(const r of BL_RANKS)for(const s of BL_SUITS)d.push(r+s);return d;}
+
+async function BL_createRoom(){
+  roomCode=rc();isHost=true;
+  gs={phase:"lobby",host:myId,players:[{id:myId,name:myName,av:myAv,hand:[],out:false,place:0}],
+      turn:null,rank:null,needRank:true,pile:[],lastPid:null,canChallenge:null,passes:0,
+      pendingOutPid:null,reveal:null,finishOrder:[],log:[],starter:null};
+  await BL_stRef().set(gs);
+  actTimer=setInterval(BL_processActions,650);
+  listenToState(roomCode,BL_ROOT,BL_clean);
+  render();
+}
+async function BL_joinRoom(code){
+  roomCode=code;isHost=false;
+  const snap=await db.ref(`${BL_ROOT}/${code}/state`).once("value");
+  if(!snap.exists()){toast("Room not found!","err");roomCode="";render();return;}
+  const data=BL_clean(snap.val());
+  if(data.phase!=="lobby"){toast("Game already started!","err");roomCode="";render();return;}
+  gs=data;
+  await BL_myAcRef().set({type:"JOIN",name:myName,av:myAv,_ts:ms()});
+  listenToState(code,BL_ROOT,BL_clean);render();
+}
+
+// ── host: process the action queue ────────────────────────────────
+async function BL_processActions(){
+  const snap=await BL_acRef().once("value");const acts=snap.val();if(!acts)return;
+  let dirty=false;
+  for(const[pid,act]of Object.entries(acts)){
+    if(!act||!act.type)continue;
+    db.ref(`${BL_ROOT}/${roomCode}/actions/${pid}`).remove();
+    if(act.type==="JOIN"&&gs.phase==="lobby"&&!gs.players.find(p=>p.id===pid)){gs.players.push({id:pid,name:act.name,av:act.av,hand:[],out:false,place:0});dirty=true;}
+    else if(act.type==="PLAY"){ if(BL_doPlay(pid,act))dirty=true; }
+    else if(act.type==="PASS"){ if(BL_doPass(pid))dirty=true; }
+    else if(act.type==="CHALLENGE"){ if(BL_doChallenge(pid))dirty=true; }
+  }
+  if(dirty){await BL_stRef().set(gs);render();}
+}
+
+// ── host: game helpers ────────────────────────────────────────────
+function BL_active(){return gs.players.filter(p=>!p.out);}
+function BL_next(pid){const ps=gs.players;let i=ps.findIndex(p=>p.id===pid);for(let k=1;k<=ps.length;k++){const q=ps[(i+k)%ps.length];if(!q.out)return q.id;}return pid;}
+function BL_pileCards(){const a=[];for(const pl of gs.pile)for(const c of pl.cards)a.push(c);return a;}
+function BL_log(s){gs.log.push(s);if(gs.log.length>7)gs.log.shift();}
+function BL_finalizeOut(pid){const p=gs.players.find(x=>x.id===pid);if(!p||p.out)return;p.out=true;if(!gs.finishOrder.includes(pid))gs.finishOrder.push(pid);p.place=gs.finishOrder.length;BL_log(`🎉 ${p.name} went out — finished #${p.place}!`);}
+function BL_checkEnd(){const act=BL_active();if(act.length<=1){if(act.length===1){const last=act[0];if(!gs.finishOrder.includes(last.id))gs.finishOrder.push(last.id);last.place=gs.players.length;}return true;}return false;}
+
+async function BL_startGame(){
+  if(!isHost)return;
+  const deck=shuffle(BL_deck());
+  gs.players.forEach(p=>{p.hand=[];p.out=false;p.place=0;});
+  deck.forEach((c,i)=>gs.players[i%gs.players.length].hand.push(c));
+  gs.players.forEach(p=>p.hand.sort((a,b)=>BL_RANKS.indexOf(BL_rankOf(a))-BL_RANKS.indexOf(BL_rankOf(b))||a.localeCompare(b)));
+  Object.assign(gs,{phase:"playing",needRank:true,rank:null,pile:[],lastPid:null,canChallenge:null,passes:0,pendingOutPid:null,reveal:null,finishOrder:[],log:["Game on! Whoever starts a pile picks the rank."],turn:gs.players[0].id,starter:gs.players[0].id});
+  await BL_stRef().set(gs);render();
+}
+
+function BL_doPlay(pid,act){
+  if(gs.phase!=="playing"||pid!==gs.turn)return false;
+  const p=gs.players.find(x=>x.id===pid);if(!p)return false;
+  const cards=(toArr(act.cards)||[]).filter(c=>p.hand.includes(c));
+  if(cards.length<1||cards.length>4||cards.length!==(toArr(act.cards)||[]).length)return false;
+  const rank=gs.needRank?act.rank:gs.rank;
+  if(!BL_RANKS.includes(rank))return false;
+  // the eligible challenger chose to play instead of challenging → close the window
+  if(gs.canChallenge===pid&&gs.pendingOutPid){BL_finalizeOut(gs.pendingOutPid);gs.pendingOutPid=null;if(BL_checkEnd()){gs.phase="finished";return true;}}
+  gs.rank=rank;gs.needRank=false;
+  p.hand=p.hand.filter(c=>!cards.includes(c));
+  gs.pile.push({pid,pname:p.name,cards,claim:rank,count:cards.length});
+  gs.lastPid=pid;gs.passes=0;
+  BL_log(`${p.name} played ${cards.length} × ${BL_RANKLBL[rank]}`);
+  if(p.hand.length===0)gs.pendingOutPid=pid;
+  gs.turn=BL_next(pid);gs.canChallenge=gs.turn;
+  return true;
+}
+function BL_doPass(pid){
+  if(gs.phase!=="playing"||pid!==gs.turn||gs.needRank)return false;
+  const p=gs.players.find(x=>x.id===pid);
+  if(gs.canChallenge===pid&&gs.pendingOutPid){BL_finalizeOut(gs.pendingOutPid);gs.pendingOutPid=null;if(BL_checkEnd()){gs.phase="finished";return true;}}
+  gs.canChallenge=null;gs.passes++;
+  BL_log(`${p.name} passed`);
+  if(gs.passes>=BL_active().length){
+    BL_log(`Pile cleared — everyone passed.`);
+    Object.assign(gs,{pile:[],rank:null,needRank:true,lastPid:null,canChallenge:null,passes:0});
+    gs.turn=BL_next(pid);gs.starter=gs.turn;return true;
+  }
+  gs.turn=BL_next(pid);return true;
+}
+function BL_doChallenge(pid){
+  if(gs.phase!=="playing"||pid!==gs.canChallenge)return false;
+  const top=gs.pile[gs.pile.length-1];if(!top)return false;
+  const target=gs.players.find(x=>x.id===top.pid),challenger=gs.players.find(x=>x.id===pid);
+  const wasBluff=top.cards.some(c=>BL_rankOf(c)!==gs.rank);
+  const pile=BL_pileCards();let loser;
+  if(wasBluff){loser=target;target.hand=target.hand.concat(pile);gs.pendingOutPid=null;}
+  else{loser=challenger;challenger.hand=challenger.hand.concat(pile);if(gs.pendingOutPid===target.id){BL_finalizeOut(target.id);gs.pendingOutPid=null;}}
+  loser.hand.sort((a,b)=>BL_RANKS.indexOf(BL_rankOf(a))-BL_RANKS.indexOf(BL_rankOf(b))||a.localeCompare(b));
+  gs.reveal={by:challenger.name,target:target.name,cards:top.cards,claim:gs.rank,wasBluff,loser:loser.name,pileN:pile.length};
+  BL_log(`${challenger.name} called BLUFF on ${target.name} — ${wasBluff?"caught! 🎯":"wrong! 🛡️"} ${loser.name} takes ${pile.length}`);
+  Object.assign(gs,{pile:[],rank:null,needRank:true,lastPid:null,canChallenge:null,passes:0,phase:"reveal"});
+  const end=BL_checkEnd();
+  gs.turn=loser.out?BL_next(loser.id):loser.id;gs.starter=gs.turn;
+  clearTimeout(BL_revealTimer);
+  BL_revealTimer=setTimeout(()=>{if(!isHost||!gs)return;gs.reveal=null;gs.phase=end?"finished":"playing";BL_stRef().set(gs);render();},3800);
+  return true;
+}
+
+// ── client actions ────────────────────────────────────────────────
+function BL_sendPlay(){
+  const me=gs.players.find(p=>p.id===myId);if(!me||gs.turn!==myId||gs.phase!=="playing")return;
+  const cards=BL_sel.filter(c=>me.hand.includes(c));
+  if(cards.length<1){toast("Select 1–4 cards to play","err");return;}
+  if(cards.length>4){toast("Max 4 cards","err");return;}
+  const rank=gs.needRank?BL_pickRank:gs.rank;
+  if(!rank){toast("Pick a rank to claim","err");return;}
+  BL_myAcRef().set({type:"PLAY",cards,rank,_ts:ms()});
+  BL_sel=[];BL_pickRank=null;
+}
+function BL_sendPass(){ if(gs.turn!==myId||gs.needRank)return; BL_myAcRef().set({type:"PASS",_ts:ms()}); BL_sel=[]; }
+function BL_sendChallenge(){ if(gs.canChallenge!==myId)return; BL_myAcRef().set({type:"CHALLENGE",_ts:ms()}); BL_sel=[]; }
+
+// ── rendering ─────────────────────────────────────────────────────
+function BL_cardHTML(card,{sel=false,sm=false,back=false}={}){
+  if(back)return `<div class="bl-card back${sm?' sm':''}"></div>`;
+  const r=BL_rankOf(card),s=BL_suitOf(card),red=(s==="H"||s==="D");
+  return `<div class="bl-card${red?' red':''}${sel?' sel':''}${sm?' sm':''}" data-card="${card}"><span class="r">${BL_rankDisp(r)}</span><span class="s">${BL_SUITSYM[s]}</span></div>`;
+}
+const BL_hdr=()=>`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--bd)"><div class="hf" style="font-size:24px;color:var(--gr)">BLUFF</div><button class="btn" id="bl-back" style="background:var(--ca2);color:var(--mu);border:1px solid var(--bd);width:auto;padding:6px 14px;font-size:12px">Leave</button></div>`;
+
+function BL_scrSetup(){return`
+<div class="fade" style="padding-top:20px">
+  <button class="btn" id="back-home" style="background:var(--ca2);color:var(--mu);border:1px solid var(--bd);width:auto;padding:8px 16px;font-size:13px;margin-bottom:24px">← Back</button>
+  <div style="text-align:center;margin-bottom:32px">
+    <div class="hf" style="font-size:60px;color:var(--gr);letter-spacing:3px;line-height:1;text-shadow:0 0 50px rgba(0,224,150,.35)">BLUFF</div>
+    <div style="color:var(--mu);margin-top:8px;font-size:14px">Lie about your cards · Don't get caught</div>
+  </div>
+  <div class="card" style="margin-bottom:16px"><span class="lbl">Your Name</span><input class="inp" id="ni" placeholder="What should we call you?" maxlength="20"></div>
+  <button class="btn" id="cbtn" style="background:var(--gr);color:#000;margin-bottom:12px;font-size:17px;padding:15px">🃏 Create Room</button>
+  <div class="row">
+    <input class="inp" id="ji" placeholder="CODE" maxlength="4" style="flex:1;text-transform:uppercase;letter-spacing:8px;text-align:center;font-size:22px">
+    <button class="btn" id="jbtn" style="background:var(--ca2);color:var(--te);border:2px solid var(--bd);width:auto;padding:14px 20px;font-size:16px;flex-shrink:0">Join →</button>
+  </div>
+</div>`;}
+
+function BL_scrLobby(){
+  const rows=gs.players.map((p,i)=>`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;${i<gs.players.length-1?"border-bottom:1px solid var(--bd)":""}"><span style="font-size:24px">${p.av}</span><span style="font-weight:800;font-size:15px;flex:1">${p.name}${p.id===myId?' <span style="color:var(--mu);font-size:11px">(you)</span>':''}</span>${i===0?'<span style="background:var(--gr);color:#000;font-size:10px;font-weight:900;padding:2px 10px;border-radius:20px">HOST</span>':''}</div>`).join("");
+  return`<div class="fade" style="padding-top:20px"><div style="text-align:center;margin-bottom:28px"><span class="lbl">Room Code</span><div class="hf" style="font-size:66px;color:var(--gr);letter-spacing:14px;line-height:1;text-shadow:0 0 50px rgba(0,224,150,.3)">${roomCode}</div><div style="color:var(--mu);font-size:13px;margin-top:8px">Share this code with friends</div></div><div class="card" style="margin-bottom:20px"><span class="lbl">Players · ${gs.players.length}</span><div>${rows}</div></div>${isHost?`<button class="btn" id="sbtn" ${gs.players.length>=2?"":"disabled"} style="background:var(--gr);color:#000;font-size:17px;padding:16px">${gs.players.length>=2?"Deal & Start →":"Waiting for 2+ players…"}</button>`:`<div style="text-align:center;color:var(--mu);font-size:16px;padding:20px"><span class="blink">⏳</span> Waiting for host…</div>`}</div>`;}
+
+function BL_pbar(){
+  return `<div class="bl-pbar">${gs.players.map(p=>{const turn=p.id===gs.turn&&gs.phase==="playing";return `<div class="bl-pchip${turn?' turn':''}${p.out?' out':''}"><div style="font-size:20px">${p.av}</div><div style="font-size:11px;font-weight:800;color:${p.id===myId?'var(--gr)':'var(--te)'}">${p.name}</div><div style="font-size:11px;color:var(--mu)">${p.out?`#${p.place}`:`${p.hand.length} cards`}</div></div>`;}).join("")}</div>`;
+}
+
+function BL_scrPlay(){
+  const me=gs.players.find(p=>p.id===myId);
+  const myTurn=gs.turn===myId&&gs.phase==="playing";
+  const top=gs.pile[gs.pile.length-1];
+  const pileN=gs.pile.reduce((a,pl)=>a+pl.count,0);
+  // pile visual
+  let pileHTML=`<div style="color:var(--mu);font-size:13px">No pile yet — new round</div>`;
+  if(pileN>0){
+    const stack=Array.from({length:Math.min(pileN,6)}).map((_,i)=>`<div class="bl-card back" style="left:${i*7}px;top:${i%2*2}px"></div>`).join("");
+    pileHTML=`<div style="position:relative;width:${Math.min(pileN,6)*7+50}px;height:70px;margin:0 auto">${stack}<div class="bl-pbadge">${pileN}</div></div>`;
+  }
+  const claimTxt = top?`<b style="color:var(--te)">${top.pname}</b> claimed <b style="color:var(--gr)">${top.count} × ${BL_RANKLBL[top.claim]}</b>`:(gs.needRank?`New round — the leader picks a rank`:``);
+  // controls
+  let controls="";
+  if(myTurn){
+    if(gs.needRank){
+      const picker=BL_RANKS.slice().reverse().map(r=>`<div class="bl-rankbtn${BL_pickRank===r?' on':''}" data-rank="${r}">${BL_rankDisp(r)}</div>`).join("");
+      controls=`<div style="text-align:center"><div class="lbl" style="text-align:center">1 · Pick the rank you'll claim</div><div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:14px">${picker}</div><div class="lbl" style="text-align:center">2 · Select 1–4 cards to place face-down</div><button class="btn" id="bl-play" style="background:var(--gr);color:#000;font-size:16px;padding:14px;margin-top:6px">Play ${BL_sel.length||""} ${BL_pickRank?("as "+BL_RANKLBL[BL_pickRank]):""} →</button></div>`;
+    } else {
+      const canCh=gs.canChallenge===myId&&!!top;
+      controls=`<div class="g2" style="margin-bottom:10px"><button class="btn" id="bl-play" style="background:var(--gr);color:#000;font-size:15px;padding:14px">Play ${BL_sel.length||""} as ${BL_RANKLBL[gs.rank]}</button><button class="btn" id="bl-pass" style="background:var(--ca2);color:var(--te);border:2px solid var(--bd);font-size:15px;padding:14px">Pass</button></div>${canCh?`<button class="btn" id="bl-challenge" style="background:var(--pk);color:#fff;font-size:16px;padding:14px">🔍 Call BLUFF on ${top.pname}!</button>`:""}<div style="text-align:center;color:var(--mu);font-size:12px;margin-top:8px">Claim must be ${BL_RANKLBL[gs.rank]} — lie if you have to</div>`;
+    }
+  } else {
+    const tp=gs.players.find(p=>p.id===gs.turn);
+    controls=`<div style="text-align:center;color:var(--mu);font-size:15px;padding:14px"><span class="blink">⏳</span> Waiting for <b style="color:var(--te)">${tp?tp.name:"…"}</b>…</div>`;
+  }
+  const handHTML = me&&!me.out ? `<div class="lbl" style="text-align:center;margin:6px 0">Your hand · ${me.hand.length}</div><div class="bl-hand">${me.hand.map(c=>BL_cardHTML(c,{sel:BL_sel.includes(c)})).join("")}</div>` : (me&&me.out?`<div style="text-align:center;color:var(--gr);font-weight:800;padding:16px">✓ You're out — finished #${me.place}!</div>`:"");
+  return `<div class="fade" style="padding-top:16px">${BL_hdr()}
+    ${BL_pbar()}
+    <div class="card" style="margin:14px 0;text-align:center">
+      <div class="bl-pile" style="margin-bottom:8px">${pileHTML}</div>
+      <div style="font-size:13px;color:var(--mu);min-height:18px">${claimTxt}</div>
+      ${gs.rank&&!gs.needRank?`<div style="margin-top:8px"><span class="bl-pill">Current rank: <b style="color:var(--gr)">${BL_RANKLBL[gs.rank]}</b></span></div>`:""}
+    </div>
+    <div style="margin-bottom:14px">${controls}</div>
+    <div style="margin-bottom:14px">${handHTML}</div>
+    <div class="bl-log" id="bl-log">${gs.log.slice().reverse().map(l=>`<div>${l}</div>`).join("")}</div>
+  </div>`;
+}
+
+function BL_scrReveal(){
+  const rv=gs.reveal;if(!rv)return BL_scrPlay();
+  const cardsHTML=rv.cards.map(c=>BL_cardHTML(c,{})).join("");
+  const real=rv.wasBluff;
+  return `<div class="fade" style="padding-top:16px">${BL_hdr()}
+    <div style="text-align:center;padding:20px 0">
+      <div style="color:var(--mu);font-size:14px;margin-bottom:6px">${rv.by} called bluff on ${rv.target}</div>
+      <div style="color:var(--mu);font-size:13px;margin-bottom:10px">Claimed: <b style="color:var(--te)">${BL_RANKLBL[rv.claim]}</b></div>
+      <div class="bl-hand" style="margin-bottom:16px">${cardsHTML}</div>
+      <div class="hf" style="font-size:40px;color:${real?'var(--pk)':'var(--gr)'};margin-bottom:6px">${real?"BLUFF! 🎯":"HONEST 🛡️"}</div>
+      <div style="font-size:16px;font-weight:800"><b style="color:var(--y)">${rv.loser}</b> picks up ${rv.pileN} cards</div>
+    </div>
+    ${BL_pbar()}
+  </div>`;
+}
+
+function BL_scrFinished(){
+  const order=gs.finishOrder.map(id=>gs.players.find(p=>p.id===id)).filter(Boolean);
+  const rows=order.map((p,i)=>{const last=i===order.length-1&&order.length===gs.players.length;const medal=last?"🃏":(i===0?"🥇":i===1?"🥈":i===2?"🥉":`${i+1}.`);return `<div style="display:flex;align-items:center;gap:12px;padding:12px 0;${i<order.length-1?"border-bottom:1px solid var(--bd)":""}"><span style="font-size:18px;width:28px;text-align:center">${medal}</span><span style="font-size:22px">${p.av}</span><span style="font-weight:800;flex:1;font-size:14px;color:${p.id===myId?'var(--gr)':'var(--te)'}">${p.name}${p.id===myId?" (you)":""}</span><span style="font-size:12px;color:var(--mu)">${last?"loser":i===0?"winner":""}</span></div>`;}).join("");
+  const won=order[0]&&order[0].id===myId;
+  setTimeout(()=>{try{playSfx(won?'win':'fool');}catch(e){}},200);
+  return `<div class="fade" style="padding-top:24px"><div style="text-align:center;margin-bottom:22px"><div class="hf" style="font-size:44px;color:var(--gr)">Game Over!</div>${order[0]?`<div style="font-size:46px;margin:10px 0 4px">${order[0].av}</div><div class="hf" style="font-size:24px;color:var(--gr)">${order[0].name} wins! 🏆</div>`:""}</div><div class="card" style="margin-bottom:16px"><span class="lbl">Final Standings</span>${rows}</div>${isHost?`<button class="btn" id="bl-again" style="background:var(--gr);color:#000;font-size:16px;padding:14px">🔁 Deal Again</button>`:`<div style="text-align:center;color:var(--mu);font-size:14px;padding:12px"><span class="blink">⏳</span> Waiting for host…</div>`}</div>`;
+}
+
+function renderBluff(){
+  clearInterval(displayTimer);
+  const app=document.getElementById("app");if(!app)return;
+  // keep client selection valid
+  const me=gs&&gs.players?gs.players.find(p=>p.id===myId):null;
+  if(me)BL_sel=BL_sel.filter(c=>me.hand.includes(c));
+  const p=gs?gs.phase:"";
+  try{
+    if(!gs||!roomCode)      app.innerHTML=BL_scrSetup();
+    else if(p==="lobby")    app.innerHTML=BL_scrLobby();
+    else if(p==="playing")  app.innerHTML=BL_scrPlay();
+    else if(p==="reveal")   app.innerHTML=BL_scrReveal();
+    else if(p==="finished") app.innerHTML=BL_scrFinished();
+    bindBluff();
+  }catch(e){console.error("bluff render",e);}
+}
+
+function bindBluff(){
+  const $=id=>document.getElementById(id);const on=(id,fn)=>{const el=$(id);if(el)el.onclick=fn;};
+  const leave=()=>{currentGame=null;gs=null;roomCode="";BL_sel=[];BL_pickRank=null;clearTimeout(BL_revealTimer);if(stateRefListener&&stateCallback)stateRefListener.off("value",stateCallback);if(statePoller)clearInterval(statePoller);if(actTimer)clearInterval(actTimer);render();};
+  on("back-home",leave);on("bl-back",leave);
+  on("cbtn",async()=>{myName=$("ni")?.value.trim();if(!myName){toast("Enter your name!","err");return;}$("cbtn").disabled=true;$("cbtn").textContent="Creating…";await BL_createRoom();});
+  on("jbtn",async()=>{myName=$("ni")?.value.trim();const c=$("ji")?.value.toUpperCase().trim();if(!myName){toast("Enter your name!","err");return;}if(!c||c.length!==4){toast("Need a 4-letter code","err");return;}$("jbtn").disabled=true;await BL_joinRoom(c);});
+  const ni=$("ni");if(ni){ni.onkeydown=e=>{if(e.key==="Enter")$("cbtn")?.click();};setTimeout(()=>ni.focus(),60);}
+  const ji=$("ji");if(ji)ji.onkeydown=e=>{if(e.key==="Enter")$("jbtn")?.click();};
+  on("sbtn",()=>BL_startGame());
+  on("bl-play",()=>BL_sendPlay());
+  on("bl-pass",()=>BL_sendPass());
+  on("bl-challenge",()=>BL_sendChallenge());
+  on("bl-again",()=>BL_startGame());
+  document.querySelectorAll(".bl-rankbtn").forEach(b=>{b.onclick=()=>{BL_pickRank=b.dataset.rank;renderBluff();};});
+  document.querySelectorAll(".bl-hand .bl-card[data-card]").forEach(c=>{c.onclick=()=>{const card=c.dataset.card;if(BL_sel.includes(card))BL_sel=BL_sel.filter(x=>x!==card);else{if(BL_sel.length>=4){toast("Max 4 cards","err");return;}BL_sel=[...BL_sel,card];}renderBluff();};});
+}
+
+
+// ═══════════════════════════════════════════════════════
 // HOME SCREEN
 // ═══════════════════════════════════════════════════════
 function scrHome(){return`
@@ -2415,6 +2713,20 @@ function scrHome(){return`
     </div>
   </div>
 
+  <!-- BLUFF card -->
+  <div onclick="currentGame='bluff';render();" style="background:linear-gradient(135deg,#04140d,#0F1525);border:2px solid rgba(0,224,150,.3);border-radius:20px;padding:24px;margin-top:16px;cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor='#00E096'" onmouseout="this.style.borderColor='rgba(0,224,150,.3)'">
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
+      <div class="hf" style="font-size:34px;color:#00E096;text-shadow:0 0 30px rgba(0,224,150,.5);min-width:80px">BLUFF</div>
+      <div style="background:#00E096;color:#000;font-size:11px;font-weight:900;padding:3px 10px;border-radius:20px;letter-spacing:1px">CARD GAME</div>
+    </div>
+    <div style="color:var(--te);font-size:14px;font-weight:700;line-height:1.6">The classic card bluffing game. Ditch your cards by claiming a rank — but you're allowed to lie. Get called out and you grab the whole pile. First to empty their hand wins; last one holding loses.</div>
+    <div style="display:flex;gap:12px;margin-top:14px">
+      <span style="color:var(--mu);font-size:12px">👥 2–8 players</span>
+      <span style="color:var(--mu);font-size:12px">🃏 Card game</span>
+      <span style="color:var(--mu);font-size:12px">😏 Bluffing</span>
+    </div>
+  </div>
+
   <div style="text-align:center;margin-top:28px;color:var(--mu);font-size:12px">zipzap-games.com · More games coming soon</div>
 </div>`;}
 
@@ -2448,6 +2760,7 @@ function render(){
   if(currentGame==="psych"){renderPsych();return;}
   if(currentGame==="draw") {renderDraw(); return;}
   if(currentGame==="type") {renderType(); return;}
+  if(currentGame==="bluff"){renderBluff(); return;}
 }
 
 render();
