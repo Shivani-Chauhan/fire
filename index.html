@@ -545,7 +545,7 @@ function B_scrSetup(){return`
 
 function B_scrLobby(){
   const rows=gs.players.map((p,i)=>`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;${i<gs.players.length-1?"border-bottom:1px solid var(--bd)":""}"><span style="font-size:24px">${p.av}</span><span style="font-weight:800;font-size:15px;flex:1">${p.name}${p.id===myId?' <span style="color:var(--mu);font-size:11px">(you)</span>':''}</span>${i===0?'<span style="background:var(--y);color:#000;font-size:10px;font-weight:900;padding:2px 10px;border-radius:20px">HOST</span>':''}</div>`).join("");
-  return`<div class="fade" style="padding-top:20px"><div style="text-align:center;margin-bottom:30px"><span class="lbl">Room Code</span><div class="hf" style="font-size:72px;color:var(--y);letter-spacing:16px;line-height:1;text-shadow:0 0 50px #FFE60044">${roomCode}</div><div style="color:var(--mu);font-size:13px;margin-top:8px">Share this code with friends</div></div><div class="card" style="margin-bottom:20px"><span class="lbl">Players · <span id="b-playercount">${gs.players.length}</span></span><div id="b-players">${rows}</div></div>${isHost?`<button class="btn" id="sbtn" style="background:var(--gr);color:#000;font-size:17px;padding:16px">Start Game →</button>`:`<div style="text-align:center;color:var(--mu);font-size:16px;padding:20px"><span class="blink">⏳</span> Waiting for host…</div>`}</div>`;}
+  return`<div class="fade" style="padding-top:20px"><div style="text-align:center;margin-bottom:30px"><span class="lbl">Room Code</span><div class="hf" style="font-size:72px;color:var(--y);letter-spacing:16px;line-height:1;text-shadow:0 0 50px #FFE60044">${roomCode}</div><div style="color:var(--mu);font-size:13px;margin-top:8px">Share this code with friends</div><button class="btn" onclick="zzShareSheet(currentGame,roomCode)" style="display:inline-block;width:auto;background:var(--ca2);color:var(--te);border:1px solid var(--bd);margin-top:14px;padding:11px 22px;font-size:14px;font-weight:800">🔗 Invite friends</button></div><div class="card" style="margin-bottom:20px"><span class="lbl">Players · <span id="b-playercount">${gs.players.length}</span></span><div id="b-players">${rows}</div></div>${isHost?`<button class="btn" id="sbtn" style="background:var(--gr);color:#000;font-size:17px;padding:16px">Start Game →</button>`:`<div style="text-align:center;color:var(--mu);font-size:16px;padding:20px"><span class="blink">⏳</span> Waiting for host…</div>`}</div>`;}
 
 function B_scrActive(){
   const sub=B_hasSubmitted||!!gs.subs.find(s=>s.pid===myId);
@@ -997,7 +997,7 @@ function P_scrSetup(){return`
 
 function P_scrLobby(){
   const rows=gs.players.map((p,i)=>`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;${i<gs.players.length-1?"border-bottom:1px solid var(--bd)":""}"><span style="font-size:24px">${p.av}</span><span style="font-weight:800;font-size:15px;flex:1">${p.name}${p.id===myId?' <span style="color:var(--mu);font-size:11px">(you)</span>':''}</span>${i===0?'<span style="background:var(--pu);color:#fff;font-size:10px;font-weight:900;padding:2px 10px;border-radius:20px">HOST</span>':''}</div>`).join("");
-  return`<div class="fade" style="padding-top:20px"><div style="text-align:center;margin-bottom:30px"><span class="lbl">Room Code</span><div class="hf" style="font-size:72px;color:var(--pu);letter-spacing:16px;line-height:1;text-shadow:0 0 50px #A855F744">${roomCode}</div><div style="color:var(--mu);font-size:13px;margin-top:8px">Share this code with friends</div></div><div class="card" style="margin-bottom:20px"><span class="lbl">Players · <span id="p-playercount">${gs.players.length}</span></span><div id="p-players">${rows}</div></div>${isHost?`<button class="btn" id="sbtn" style="background:var(--gr);color:#000;font-size:17px;padding:16px">Start Game →</button><div style="color:var(--mu);font-size:12px;text-align:center;margin-top:8px">Best with 3+ players</div>`:`<div style="text-align:center;color:var(--mu);font-size:16px;padding:20px"><span class="blink">⏳</span> Waiting for host…</div>`}</div>`;}
+  return`<div class="fade" style="padding-top:20px"><div style="text-align:center;margin-bottom:30px"><span class="lbl">Room Code</span><div class="hf" style="font-size:72px;color:var(--pu);letter-spacing:16px;line-height:1;text-shadow:0 0 50px #A855F744">${roomCode}</div><div style="color:var(--mu);font-size:13px;margin-top:8px">Share this code with friends</div><button class="btn" onclick="zzShareSheet(currentGame,roomCode)" style="display:inline-block;width:auto;background:var(--ca2);color:var(--te);border:1px solid var(--bd);margin-top:14px;padding:11px 22px;font-size:14px;font-weight:800">🔗 Invite friends</button></div><div class="card" style="margin-bottom:20px"><span class="lbl">Players · <span id="p-playercount">${gs.players.length}</span></span><div id="p-players">${rows}</div></div>${isHost?`<button class="btn" id="sbtn" style="background:var(--gr);color:#000;font-size:17px;padding:16px">Start Game →</button><div style="color:var(--mu);font-size:12px;text-align:center;margin-top:8px">Best with 3+ players</div>`:`<div style="text-align:center;color:var(--mu);font-size:16px;padding:20px"><span class="blink">⏳</span> Waiting for host…</div>`}</div>`;}
 
 function P_scrSubmit(){
   const isSubject=gs.subject?.id===myId;
@@ -1445,7 +1445,7 @@ function D_scrSetup(){ return`
 
 function D_scrLobby(){
   const rows=gs.players.map((p,i)=>`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;${i<gs.players.length-1?"border-bottom:1px solid var(--bd)":""}"><span style="font-size:24px">${p.av}</span><span style="font-weight:800;font-size:15px;flex:1">${p.name}${p.id===myId?' <span style="color:var(--mu);font-size:11px">(you)</span>':''}</span>${i===0?'<span style="background:#06B6D4;color:#000;font-size:10px;font-weight:900;padding:2px 10px;border-radius:20px">HOST</span>':''}</div>`).join("");
-  return`<div class="fade" style="padding-top:20px"><div style="text-align:center;margin-bottom:30px"><span class="lbl">Room Code</span><div class="hf" style="font-size:72px;color:#06B6D4;letter-spacing:16px;line-height:1;text-shadow:0 0 50px rgba(6,182,212,.4)">${roomCode}</div><div style="color:var(--mu);font-size:13px;margin-top:8px">Share this code with friends</div></div><div class="card" style="margin-bottom:20px"><span class="lbl">Players · <span id="d-playercount">${gs.players.length}</span></span><div id="d-players">${rows}</div></div>${isHost?`<button class="btn" id="sbtn" style="background:var(--gr);color:#000;font-size:17px;padding:16px">Start Game →</button><div style="text-align:center;color:var(--mu);font-size:12px;margin-top:8px">Each player draws once · <span id="d-roundcount">${gs.players.length}</span> rounds total</div>`:`<div style="text-align:center;color:var(--mu);font-size:16px;padding:20px"><span class="blink">⏳</span> Waiting for host to start…</div>`}</div>`;}
+  return`<div class="fade" style="padding-top:20px"><div style="text-align:center;margin-bottom:30px"><span class="lbl">Room Code</span><div class="hf" style="font-size:72px;color:#06B6D4;letter-spacing:16px;line-height:1;text-shadow:0 0 50px rgba(6,182,212,.4)">${roomCode}</div><div style="color:var(--mu);font-size:13px;margin-top:8px">Share this code with friends</div><button class="btn" onclick="zzShareSheet(currentGame,roomCode)" style="display:inline-block;width:auto;background:var(--ca2);color:var(--te);border:1px solid var(--bd);margin-top:14px;padding:11px 22px;font-size:14px;font-weight:800">🔗 Invite friends</button></div><div class="card" style="margin-bottom:20px"><span class="lbl">Players · <span id="d-playercount">${gs.players.length}</span></span><div id="d-players">${rows}</div></div>${isHost?`<button class="btn" id="sbtn" style="background:var(--gr);color:#000;font-size:17px;padding:16px">Start Game →</button><div style="text-align:center;color:var(--mu);font-size:12px;margin-top:8px">Each player draws once · <span id="d-roundcount">${gs.players.length}</span> rounds total</div>`:`<div style="text-align:center;color:var(--mu);font-size:16px;padding:20px"><span class="blink">⏳</span> Waiting for host to start…</div>`}</div>`;}
 
 function D_scrDraw(){
   D_isDrawer = gs.drawerId===myId;
@@ -2171,6 +2171,7 @@ function TP_lobbyScr(){
     <span class="lbl">Room Code</span>
     <div class="hf" style="font-size:64px;color:#e2b714;letter-spacing:14px;line-height:1;text-shadow:0 0 50px rgba(226,183,20,.3)">${TP_code}</div>
     <div style="color:var(--mu);font-size:15px;margin-top:8px">Share this code with friends</div>
+    <button class="btn" onclick="zzShareSheet('type',TP_code)" style="display:inline-block;width:auto;background:var(--ca2);color:var(--te);border:1px solid var(--bd);margin-top:14px;padding:11px 22px;font-size:14px;font-weight:800">🔗 Invite friends</button>
   </div>
   <div class="card" style="margin-bottom:20px"><span class="lbl">Racers · <span id="tp-count-n">0</span></span><div id="tp-lobby-list"></div></div>
   <div id="tp-lobby-cta"></div>
@@ -2675,7 +2676,7 @@ function BF_scrLobby(){
   const opt=(id,val,title,sub)=>`<div class="bf-deckopt${mode===val?" on":""}" ${isHost?`data-deck="${val}"`:""} id="${id}"><div style="font-weight:900;font-size:14px;color:${mode===val?"var(--pk)":"var(--te)"}">${title}</div><div style="color:var(--mu);font-size:11px;margin-top:3px;line-height:1.4">${sub}</div></div>`;
   const deckCard=twoP?`<div class="card" style="margin-bottom:16px"><span class="lbl">Deck ${isHost?"":"(host picks)"}</span><div style="display:flex;gap:10px">${opt("bf-deck-classic","classic","Classic 52","Standard deck — four of every rank")}${opt("bf-deck-random","random","Surprise deck","Random counts per rank — harder to read")}</div></div>`:"";
   const caption=twoP?(mode==="random"?"2 players · surprise deck (random rank counts)":"2 players · classic 52-card deck"):`${gs.players.length} players · a full 52-card deck is dealt out`;
-  return`<div class="fade" style="padding-top:20px"><div style="text-align:center;margin-bottom:30px"><span class="lbl">Room Code</span><div class="hf" style="font-size:72px;color:var(--pk);letter-spacing:16px;line-height:1;text-shadow:0 0 50px rgba(255,61,113,.3)">${roomCode}</div><div style="color:var(--mu);font-size:13px;margin-top:8px">Share this code with friends</div></div><div class="card" style="margin-bottom:16px"><span class="lbl">Players · <span id="bf-pc">${gs.players.length}</span></span><div id="bf-players">${rows}</div></div>${deckCard}${isHost?`<button class="btn" id="bf-start" style="background:var(--gr);color:#000;font-size:17px;padding:16px" ${gs.players.length>=2?"":"disabled"}>${gs.players.length>=2?"Deal & Start →":"Waiting for 2+ players…"}</button><div style="color:var(--mu);font-size:12px;text-align:center;margin-top:8px">${caption}</div>`:`<div style="text-align:center;color:var(--mu);font-size:16px;padding:20px"><span class="blink">⏳</span> Waiting for host…</div>`}</div>`;
+  return`<div class="fade" style="padding-top:20px"><div style="text-align:center;margin-bottom:30px"><span class="lbl">Room Code</span><div class="hf" style="font-size:72px;color:var(--pk);letter-spacing:16px;line-height:1;text-shadow:0 0 50px rgba(255,61,113,.3)">${roomCode}</div><div style="color:var(--mu);font-size:13px;margin-top:8px">Share this code with friends</div><button class="btn" onclick="zzShareSheet(currentGame,roomCode)" style="display:inline-block;width:auto;background:var(--ca2);color:var(--te);border:1px solid var(--bd);margin-top:14px;padding:11px 22px;font-size:14px;font-weight:800">🔗 Invite friends</button></div><div class="card" style="margin-bottom:16px"><span class="lbl">Players · <span id="bf-pc">${gs.players.length}</span></span><div id="bf-players">${rows}</div></div>${deckCard}${isHost?`<button class="btn" id="bf-start" style="background:var(--gr);color:#000;font-size:17px;padding:16px" ${gs.players.length>=2?"":"disabled"}>${gs.players.length>=2?"Deal & Start →":"Waiting for 2+ players…"}</button><div style="color:var(--mu);font-size:12px;text-align:center;margin-top:8px">${caption}</div>`:`<div style="text-align:center;color:var(--mu);font-size:16px;padding:20px"><span class="blink">⏳</span> Waiting for host…</div>`}</div>`;
 }
 
 function BF_scrPlay(){
@@ -2979,7 +2980,7 @@ function CB_scrSetup(){return`
 
 function CB_scrLobby(){
   const rows=gs.players.map((p,i)=>`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;${i<gs.players.length-1?"border-bottom:1px solid var(--bd)":""}"><span style="font-size:24px">${p.av}</span><span style="font-weight:800;font-size:15px;flex:1">${p.name}${p.id===myId?' <span style="color:var(--mu);font-size:11px">(you)</span>':""}</span>${i===0?`<span style="background:${CB_GR};color:#000;font-size:10px;font-weight:900;padding:2px 10px;border-radius:20px">HOST</span>`:""}</div>`).join("");
-  return`<div class="fade" style="padding-top:20px"><div style="text-align:center;margin-bottom:30px"><span class="lbl">Room Code</span><div class="hf" style="font-size:72px;color:${CB_GR};letter-spacing:16px;line-height:1;text-shadow:0 0 50px rgba(0,224,150,.3)">${roomCode}</div><div style="color:var(--mu);font-size:13px;margin-top:8px">Share this code with friends</div></div><div class="card" style="margin-bottom:20px"><span class="lbl">Players · <span id="cb-pc">${gs.players.length}</span></span><div id="cb-players">${rows}</div></div>${isHost?`<button class="btn" id="cb-start" style="background:${CB_GR};color:#000;font-size:17px;padding:16px" ${gs.players.length>=2?"":"disabled"}>${gs.players.length>=2?"Deal & Start →":"Waiting for 2+ players…"}</button><div style="color:var(--mu);font-size:12px;text-align:center;margin-top:8px">2–8 players · each dealt 4 cards</div>`:`<div style="text-align:center;color:var(--mu);font-size:16px;padding:20px"><span class="blink">⏳</span> Waiting for host…</div>`}</div>`;
+  return`<div class="fade" style="padding-top:20px"><div style="text-align:center;margin-bottom:30px"><span class="lbl">Room Code</span><div class="hf" style="font-size:72px;color:${CB_GR};letter-spacing:16px;line-height:1;text-shadow:0 0 50px rgba(0,224,150,.3)">${roomCode}</div><div style="color:var(--mu);font-size:13px;margin-top:8px">Share this code with friends</div><button class="btn" onclick="zzShareSheet(currentGame,roomCode)" style="display:inline-block;width:auto;background:var(--ca2);color:var(--te);border:1px solid var(--bd);margin-top:14px;padding:11px 22px;font-size:14px;font-weight:800">🔗 Invite friends</button></div><div class="card" style="margin-bottom:20px"><span class="lbl">Players · <span id="cb-pc">${gs.players.length}</span></span><div id="cb-players">${rows}</div></div>${isHost?`<button class="btn" id="cb-start" style="background:${CB_GR};color:#000;font-size:17px;padding:16px" ${gs.players.length>=2?"":"disabled"}>${gs.players.length>=2?"Deal & Start →":"Waiting for 2+ players…"}</button><div style="color:var(--mu);font-size:12px;text-align:center;margin-top:8px">2–8 players · each dealt 4 cards</div>`:`<div style="text-align:center;color:var(--mu);font-size:16px;padding:20px"><span class="blink">⏳</span> Waiting for host…</div>`}</div>`;
 }
 
 function CB_scrPeek(){
@@ -3260,6 +3261,99 @@ function render(){
   if(currentGame==="bluff"){renderBluff(); return;}
   if(currentGame==="cabo") {renderCabo(); return;}
 }
+
+// ═══════════════════════════════════════════════════════
+// INVITE / SHARE  (foolproof: native share sheet on mobile,
+// explicit WhatsApp / Email / Copy everywhere as a fallback)
+// ═══════════════════════════════════════════════════════
+const ZZ_NAMES={blitz:"BLITZ",psych:"PSYCH",bluff:"BLUFF",cabo:"CABO",draw:"PICTIONARY",type:"Typing Race"};
+let zzInviteGame=null, zzInviteCode=null;
+
+function zzInviteLink(game,code){
+  return `${location.origin}${location.pathname}?g=${encodeURIComponent(game)}&r=${encodeURIComponent(code)}`;
+}
+function zzShareText(game,code){ return `Join my ${ZZ_NAMES[game]||"ZipZap"} game on ZipZap! Room code ${code} — tap to play: ${zzInviteLink(game,code)}`; }
+
+// The button everyone taps. Opens a small sheet with explicit options so it
+// works the same on phone and desktop (no reliance on any one API).
+function zzShareSheet(game,code){
+  if(!game||!code){ toast("Create a room first","err"); return; }
+  zzCloseShare();
+  const url=zzInviteLink(game,code);
+  const native = navigator.share ? `<button class="btn zz-sh" data-act="native" style="background:var(--y);color:#000">📤 Share via apps…</button>` : "";
+  const ov=document.createElement("div"); ov.id="zz-share-ov";
+  ov.style.cssText="position:fixed;inset:0;background:rgba(4,6,12,.66);z-index:10000;display:flex;align-items:flex-end;justify-content:center";
+  ov.onclick=e=>{ if(e.target===ov) zzCloseShare(); };
+  ov.innerHTML=`<div style="background:var(--ca);border:1px solid var(--bd);border-top-left-radius:22px;border-top-right-radius:22px;padding:22px 20px calc(22px + env(safe-area-inset-bottom));width:100%;max-width:520px;animation:fadeIn .2s ease both">
+    <div style="text-align:center;margin-bottom:4px"><div class="hf" style="font-size:22px;color:var(--te)">Invite friends</div><div style="color:var(--mu);font-size:13px;margin-top:4px">Room <b style="color:var(--te);letter-spacing:2px">${code}</b></div></div>
+    <div style="background:var(--ca2);border:1px solid var(--bd);border-radius:12px;padding:11px 13px;margin:14px 0;font-size:12px;color:var(--mu);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${url}</div>
+    ${native}
+    <button class="btn zz-sh" data-act="copy" style="background:var(--gr);color:#000;margin-top:${native?"10px":"0"}">📋 Copy invite link</button>
+    <div class="g2" style="margin-top:10px">
+      <button class="btn zz-sh" data-act="wa" style="background:#25D366;color:#04310f">🟢 WhatsApp</button>
+      <button class="btn zz-sh" data-act="mail" style="background:var(--ca2);color:var(--te);border:2px solid var(--bd)">✉️ Email</button>
+    </div>
+    <button class="btn zz-sh" data-act="close" style="background:transparent;color:var(--mu);margin-top:12px">Close</button>
+  </div>`;
+  document.body.appendChild(ov);
+  ov.querySelectorAll(".zz-sh").forEach(b=>b.onclick=()=>{
+    const a=b.getAttribute("data-act");
+    if(a==="native"){ navigator.share({title:"ZipZap Games",text:`Join my ${ZZ_NAMES[game]||"ZipZap"} game! Room ${code}`,url}).catch(()=>{}); zzCloseShare(); }
+    else if(a==="copy"){ zzCopy(url); zzCloseShare(); }
+    else if(a==="wa"){ window.open("https://wa.me/?text="+encodeURIComponent(zzShareText(game,code)),"_blank"); zzCloseShare(); }
+    else if(a==="mail"){ window.open(`mailto:?subject=${encodeURIComponent("Join my ZipZap game (room "+code+")")}&body=${encodeURIComponent(zzShareText(game,code))}`,"_blank"); zzCloseShare(); }
+    else { zzCloseShare(); }
+  });
+  try{ trackEvent("invite_open",{game}); }catch(e){}
+}
+function zzCloseShare(){ const o=document.getElementById("zz-share-ov"); if(o) o.remove(); }
+
+function zzCopy(text){
+  const ok=()=>toast("Invite link copied — paste it to friends! 📋","ok");
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(ok).catch(()=>zzCopyFallback(text,ok));
+  }else zzCopyFallback(text,ok);
+}
+function zzCopyFallback(text,ok){
+  try{
+    const ta=document.createElement("textarea"); ta.value=text; ta.setAttribute("readonly","");
+    ta.style.cssText="position:fixed;top:0;left:0;opacity:0"; document.body.appendChild(ta);
+    ta.select(); ta.setSelectionRange(0,text.length); document.execCommand("copy"); document.body.removeChild(ta); ok();
+  }catch(e){ toast("Couldn't copy automatically — code: "+text,"err"); }
+}
+
+// When a friend opens an invite link, pre-fill the code + show a banner on the
+// matching game's setup screen. Runs after every render (cheap no-op otherwise).
+function zzApplyInvite(){
+  if(!zzInviteCode||currentGame!==zzInviteGame) return;
+  const codeInp=document.querySelector('#app input[placeholder="CODE"]');
+  if(!codeInp) return;                       // not on a setup screen
+  if(codeInp.value!==zzInviteCode) codeInp.value=zzInviteCode;
+  const app=document.getElementById("app");
+  if(app && !document.getElementById("zz-invite-banner")){
+    const b=document.createElement("div"); b.id="zz-invite-banner";
+    b.style.cssText="background:linear-gradient(135deg,rgba(0,224,150,.16),rgba(0,224,150,.04));border:1px solid rgba(0,224,150,.4);border-radius:14px;padding:12px 16px;margin-bottom:16px;text-align:center;font-size:13px;font-weight:800;color:var(--te)";
+    b.innerHTML=`🎉 You're invited to room <b style="color:var(--gr);letter-spacing:2px">${zzInviteCode}</b> — enter your name & tap Join!`;
+    const host=app.querySelector(".fade")||app.firstElementChild;
+    if(host) host.insertBefore(b, host.firstChild); else app.insertBefore(b, app.firstChild);
+  }
+}
+
+// Read ?g=<game>&r=<CODE> and route to that game's join screen on load.
+(function zzParseInvite(){
+  try{
+    const q=new URLSearchParams(location.search);
+    const g=(q.get("g")||"").toLowerCase();
+    const r=(q.get("r")||"").toUpperCase().replace(/[^A-Z]/g,"").slice(0,4);
+    if(!g||r.length!==4||!["blitz","psych","bluff","cabo","draw","type"].includes(g)) return;
+    zzInviteGame=g; zzInviteCode=r; currentGame=g;
+    if(g==="type"){ TYPE_view="mp"; TP_code=""; }
+  }catch(e){}
+})();
+
+// Wrap render() so the invite pre-fill is applied after any re-render.
+const _zzRender=render;
+render=function(){ _zzRender.apply(this,arguments); try{ zzApplyInvite(); }catch(e){} };
 
 render();
 </script>
