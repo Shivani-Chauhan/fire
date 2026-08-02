@@ -238,7 +238,13 @@ body{background:var(--bg);color:var(--te);font-family:'Nunito',sans-serif;min-he
 .gtile .desc b{font-family:'Nunito',sans-serif;font-weight:900;font-size:14px;letter-spacing:.2px;color:var(--c);
   text-shadow:0 0 14px color-mix(in srgb,var(--c) 45%,transparent)}
 .gtile .desc span{font-size:11.5px;font-weight:800;line-height:1.5;color:var(--te)}
-.gtile:hover .desc{opacity:1}
+.gtile:hover .desc,.gtile.show .desc{opacity:1}
+.gtile .info{position:absolute;top:8px;right:8px;z-index:2;width:22px;height:22px;padding:0;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;font-style:italic;
+  font-family:'Nunito',sans-serif;font-weight:900;font-size:13px;line-height:1;
+  border:1.5px solid color-mix(in srgb,var(--c) 50%,transparent);
+  background:color-mix(in srgb,var(--c) 12%,var(--ca));color:var(--c);transition:background .15s,color .15s}
+.gtile:hover .info,.gtile.show .info{background:var(--c);color:#0b1026;border-color:var(--c)}
 @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes pop{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
@@ -3760,7 +3766,7 @@ function scrHome(){
   ];
   const tile=g=>{
     const long=g.t.length>9?" long":"";
-    const inner=`<div class="ico">${g.i}</div><div class="nm">${g.t}</div><div class="bd">${g.b}</div><div class="mt">${g.m}</div><div class="desc"><b>${g.t}</b><span>${g.d}</span></div>`;
+    const inner=`<div class="ico">${g.i}</div><div class="nm">${g.t}</div><div class="bd">${g.b}</div><div class="mt">${g.m}</div><div class="desc"><b>${g.t}</b><span>${g.d}</span></div><button class="info" type="button" aria-label="About ${g.t}" onclick="event.stopPropagation();event.preventDefault();this.closest('.gtile').classList.toggle('show')">i</button>`;
     return g.href
       ? `<a class="gtile${long}" href="${g.href}" style="--c:${g.c}">${inner}</a>`
       : `<div class="gtile${long}" onclick="${g.go}" style="--c:${g.c}">${inner}</div>`;
