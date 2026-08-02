@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Basketball Shootout — Free Online Basketball Shooting Game | ZipZap Games</title>
+<meta name="description" content="Free online basketball game. Drag to aim, release to shoot, and thread the rim from a new spot every round. 12 ball skins, no download, no signup — plays instantly in your browser.">
+<link rel="canonical" href="https://zipzap-games.com/hoops/">
+<meta name="theme-color" content="#0B1020">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ZipZap Games">
+<meta property="og:title" content="Basketball Shootout — Free Online Basketball Game">
+<meta property="og:description" content="Drag to aim, release to shoot. The rim moves every time you score. 12 ball skins, no signup, plays in your browser.">
+<meta property="og:url" content="https://zipzap-games.com/hoops/">
+<meta property="og:image" content="https://zipzap-games.com/hoops/cover.png">
+<meta property="og:locale" content="en_IN">
+<meta name="twitter:card" content="summary_large_image">
+
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org",
+  "@type":"VideoGame",
+  "name":"Basketball Shootout",
+  "url":"https://zipzap-games.com/hoops/",
+  "description":"Free browser basketball shooting game with a moving rim, visible shot trajectory and 12 ball skins.",
+  "genre":["Sports","Arcade","Casual"],
+  "playMode":"SinglePlayer",
+  "applicationCategory":"Game",
+  "gamePlatform":"Web browser",
+  "operatingSystem":"Any",
+  "publisher":{"@type":"Organization","name":"ZipZap Games","url":"https://zipzap-games.com/"},
+  "offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}
+}
+</script>
+<style>
+  :root{
+    --night:#0B1020;
+    --court:#151E37;
+    --chalk:#F2EFE6;
+    --leather:#E8622C;
+    --flood:#FFD24A;
+    --swish:#4FD1C5;
+    --muted:#6B7797;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--night);
+    color:var(--chalk);
+    font-family:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    min-height:100vh;
+    display:flex;align-items:flex-start;justify-content:center;
+    padding:14px;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .shell{width:100%;max-width:1000px;display:flex;flex-direction:column;gap:14px}
+
+  header{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+  .mark{display:flex;flex-direction:column;gap:2px}
+  .eyebrow{
+    font-size:10px;letter-spacing:.28em;text-transform:uppercase;
+    color:var(--muted);font-weight:600;
+  }
+  h1{
+    font-size:clamp(22px,4vw,32px);font-weight:800;
+    letter-spacing:-.02em;text-transform:uppercase;line-height:1;
+  }
+  h1 em{font-style:normal;color:var(--leather)}
+
+  .board{display:flex;gap:22px}
+  .stat{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+  .stat b{
+    font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    font-size:clamp(20px,3.6vw,30px);font-weight:700;line-height:1;
+    font-variant-numeric:tabular-nums;
+  }
+  .stat span{font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted)}
+  .stat.hot b{color:var(--flood)}
+
+  .stage{position:relative;border-radius:14px;overflow:hidden;background:var(--court);
+    box-shadow:0 24px 60px -20px rgba(0,0,0,.8), inset 0 0 0 1px rgba(242,239,230,.07)}
+  canvas{display:block;width:100%;height:auto;aspect-ratio:1000/562;touch-action:none;cursor:crosshair}
+
+  .hint{
+    position:absolute;left:50%;bottom:14px;transform:translateX(-50%);
+    font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);
+    pointer-events:none;transition:opacity .4s;white-space:nowrap;
+  }
+  .hint.gone{opacity:0}
+
+  .call{
+    position:absolute;left:50%;top:26%;transform:translate(-50%,-50%) scale(.9);
+    font-size:clamp(28px,6vw,52px);font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+    opacity:0;pointer-events:none;
+  }
+  .call.show{animation:pop .75s ease-out}
+  @keyframes pop{
+    0%{opacity:0;transform:translate(-50%,-50%) scale(.8)}
+    18%{opacity:1;transform:translate(-50%,-50%) scale(1.05)}
+    70%{opacity:1}
+    100%{opacity:0;transform:translate(-50%,-58%) scale(1)}
+  }
+
+  .rack{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .rack-label{font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-right:2px}
+  .balls{display:flex;gap:8px;flex-wrap:wrap}
+  .skin{
+    width:42px;height:42px;border-radius:50%;border:2px solid transparent;
+    background:none;padding:0;cursor:pointer;position:relative;
+    transition:transform .16s ease, border-color .16s ease;
+  }
+  .skin canvas{width:100%;height:100%;border-radius:50%}
+  .skin:hover{transform:translateY(-3px)}
+  .skin[aria-pressed="true"]{border-color:var(--chalk);transform:translateY(-3px)}
+  .skin:focus-visible{outline:2px solid var(--swish);outline-offset:3px}
+
+  .reset{
+    margin-left:auto;background:none;border:1px solid rgba(242,239,230,.2);
+    color:var(--muted);font-size:10px;letter-spacing:.18em;text-transform:uppercase;
+    padding:9px 14px;border-radius:7px;cursor:pointer;font-weight:600;
+    transition:color .16s,border-color .16s;
+  }
+  .reset:hover{color:var(--chalk);border-color:rgba(242,239,230,.5)}
+  .reset:focus-visible{outline:2px solid var(--swish);outline-offset:2px}
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.01ms !important;transition-duration:.01ms !important}
+  }
+  @media (max-width:560px){
+    .rack-label{display:none}
+    .skin{width:36px;height:36px}
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <header>
+    <div class="mark">
+      <a class="eyebrow" href="/" style="color:var(--muted);text-decoration:none">&larr; ZipZap Games</a>
+      <h1>Basketball <em>/</em> shootout</h1>
+    </div>
+    <div class="board">
+      <div class="stat"><b id="score">0</b><span>Made</span></div>
+      <div class="stat"><b id="attempts">0</b><span>Taken</span></div>
+      <div class="stat hot"><b id="streak">0</b><span>Streak</span></div>
+      <div class="stat"><b id="best">0</b><span>Best</span></div>
+    </div>
+  </header>
+
+  <div class="stage">
+    <canvas id="game" width="1000" height="562"></canvas>
+    <div class="hint" id="hint">Drag back from the ball &middot; release to shoot</div>
+    <div class="call" id="call"></div>
+  </div>
+
+  <div class="rack">
+    <span class="rack-label">Ball</span>
+    <div class="balls" id="balls"></div>
+    <button class="reset" id="reset">Clear chart</button>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  const cv = document.getElementById('game');
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+
+  // Crisp on retina: scale the backing store to devicePixelRatio.
+  function sharpen(){
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    cv.width = W * dpr;
+    cv.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = true;
+  }
+  sharpen();
+  window.addEventListener('resize', sharpen);
+
+  // ---- Palette -------------------------------------------------------------
+  const C = {
+    court:'#151E37', deep:'#0B1020', chalk:'#F2EFE6', muted:'#6B7797',
+    leather:'#E8622C', flood:'#FFD24A', swish:'#4FD1C5', rim:'#FF6B35'
+  };
+
+  // ---- Ball skins (drawn procedurally, zero image assets) ------------------
+  const SKINS = [
+    { id:'leather', name:'Leather',
+      paint:(g,r)=>{ const gr=g.createRadialGradient(-r*.35,-r*.4,r*.1,0,0,r);
+        gr.addColorStop(0,'#F5883F'); gr.addColorStop(.6,'#E8622C'); gr.addColorStop(1,'#A63C15');
+        return gr; }, seam:'rgba(28,12,6,.85)', seams:'classic' },
+    { id:'chalk', name:'Chalk',
+      paint:()=> 'rgba(242,239,230,.06)', seam:'#F2EFE6', seams:'classic', ring:'#F2EFE6' },
+    { id:'glow', name:'Night',
+      paint:(g,r)=>{ const gr=g.createRadialGradient(-r*.3,-r*.35,r*.1,0,0,r);
+        gr.addColorStop(0,'#7FF6E8'); gr.addColorStop(1,'#128C7E'); return gr; },
+      seam:'rgba(4,30,28,.7)', seams:'classic', halo:'#4FD1C5' },
+    { id:'sunset', name:'Sunset',
+      paint:(g,r)=>{ const gr=g.createLinearGradient(0,-r,0,r);
+        gr.addColorStop(0,'#FFD24A'); gr.addColorStop(.5,'#F2704E'); gr.addColorStop(1,'#8E2D6B'); return gr; },
+      seam:'rgba(255,255,255,.45)', seams:'classic' },
+    { id:'retro', name:'Retro',
+      paint:()=> '#F2EFE6', seam:'#1D2A4D', seams:'stripe' },
+    { id:'globe', name:'Globe',
+      paint:(g,r)=>{ const gr=g.createRadialGradient(-r*.3,-r*.4,r*.1,0,0,r);
+        gr.addColorStop(0,'#5AA9F0'); gr.addColorStop(1,'#153E75'); return gr; },
+      seam:'rgba(90,220,150,.9)', seams:'globe' },
+
+    { id:'flame', name:'Flame',
+      paint:(g,r)=>{ const gr=g.createRadialGradient(-r*.25,-r*.35,r*.08,0,0,r);
+        gr.addColorStop(0,'#FFE24A'); gr.addColorStop(.45,'#FF7A1A'); gr.addColorStop(1,'#8E1B08'); return gr; },
+      seam:'rgba(50,10,2,.8)', seams:'classic', halo:'#FF7A1A' },
+
+    { id:'ice', name:'Ice',
+      paint:(g,r)=>{ const gr=g.createRadialGradient(-r*.3,-r*.4,r*.1,0,0,r);
+        gr.addColorStop(0,'#FFFFFF'); gr.addColorStop(.5,'#BEE6F7'); gr.addColorStop(1,'#5E8FB5'); return gr; },
+      seam:'rgba(255,255,255,.85)', seams:'globe', halo:'#A8DCF5' },
+
+    { id:'carbon', name:'Carbon',
+      paint:(g,r)=>{ const gr=g.createRadialGradient(-r*.3,-r*.4,r*.1,0,0,r);
+        gr.addColorStop(0,'#3C4457'); gr.addColorStop(1,'#0E121C'); return gr; },
+      seam:'rgba(150,166,196,.7)', seams:'stripe' },
+
+    { id:'gold', name:'Gold',
+      paint:(g,r)=>{ const gr=g.createLinearGradient(-r*.5,-r,r*.5,r);
+        gr.addColorStop(0,'#FFF0B8'); gr.addColorStop(.35,'#E8B84B');
+        gr.addColorStop(.7,'#A9761C'); gr.addColorStop(1,'#F2D98A'); return gr; },
+      seam:'rgba(72,50,8,.75)', seams:'classic', halo:'#E8B84B' },
+
+    { id:'galaxy', name:'Galaxy',
+      paint:(g,r)=>{ const gr=g.createRadialGradient(-r*.3,-r*.4,r*.1,0,0,r);
+        gr.addColorStop(0,'#8B5CF6'); gr.addColorStop(.55,'#3B2A7A'); gr.addColorStop(1,'#100B26'); return gr; },
+      seam:'rgba(214,196,255,.8)', seams:'globe', halo:'#8B5CF6' },
+
+    { id:'melon', name:'Melon',
+      paint:(g,r)=>{ const gr=g.createRadialGradient(-r*.3,-r*.4,r*.1,0,0,r);
+        gr.addColorStop(0,'#5FCB6A'); gr.addColorStop(1,'#1E7434'); return gr; },
+      seam:'#F2547D', seams:'stripe' }
+  ];
+  let skin = SKINS[0];
+
+  function drawBall(g, x, y, r, s, spin){
+    g.save();
+    g.translate(x,y);
+    if (s.halo){
+      g.shadowColor = s.halo; g.shadowBlur = 22;
+    }
+    g.rotate(spin);
+    g.beginPath(); g.arc(0,0,r,0,Math.PI*2);
+    g.fillStyle = typeof s.paint === 'function' ? s.paint(g,r) : s.paint;
+    g.fill();
+    g.shadowBlur = 0;
+
+    if (s.ring){ g.lineWidth = 2; g.strokeStyle = s.ring; g.stroke(); }
+
+    g.save();
+    g.beginPath(); g.arc(0,0,r,0,Math.PI*2); g.clip();
+    g.strokeStyle = s.seam; g.lineWidth = Math.max(1.2, r*.085); g.lineCap='round';
+
+    if (s.seams === 'classic'){
+      g.beginPath(); g.moveTo(-r,0); g.lineTo(r,0); g.stroke();
+      g.beginPath(); g.moveTo(0,-r); g.lineTo(0,r); g.stroke();
+      g.beginPath(); g.ellipse(-r*.62,0,r*.42,r,0,0,Math.PI*2); g.stroke();
+      g.beginPath(); g.ellipse( r*.62,0,r*.42,r,0,0,Math.PI*2); g.stroke();
+    } else if (s.seams === 'stripe'){
+      for (let i=-2;i<=2;i++){
+        g.beginPath(); g.moveTo(-r, i*r*.42); g.lineTo(r, i*r*.42); g.stroke();
+      }
+    } else {
+      g.beginPath(); g.ellipse(0,0,r*.95,r*.38,0,0,Math.PI*2); g.stroke();
+      g.beginPath(); g.ellipse(-r*.3,-r*.2,r*.3,r*.22,.4,0,Math.PI*2); g.stroke();
+      g.beginPath(); g.ellipse(r*.35,r*.25,r*.28,r*.2,-.3,0,Math.PI*2); g.stroke();
+    }
+    // sheen
+    g.beginPath();
+    g.ellipse(-r*.34,-r*.4, r*.3, r*.18, -.7, 0, Math.PI*2);
+    g.fillStyle = 'rgba(255,255,255,.20)'; g.fill();
+    g.restore();
+    g.restore();
+  }
+
+  // ---- World ---------------------------------------------------------------
+  const FLOOR = 462;
+  const BALL_R = 24;
+  let HOME = { x: 190, y: 300 };
+
+  // A fresh launch spot each round, always left of the rim and clear of the floor.
+  function newSpot(){
+    HOME = {
+      x: 110 + Math.random() * 330,
+      y: 140 + Math.random() * 240
+    };
+  }
+  newSpot();
+
+  const hoop = { x: 720, y: 300, w: 92 };   // x = left edge of rim, w = rim width
+  const ball = { x: HOME.x, y: HOME.y, vx:0, vy:0, live:false, spin:0, spinV:0 };
+
+  let aiming = false, aimFrom = {x:0,y:0}, aimTo = {x:0,y:0};
+  let score = 0, attempts = 0, streak = 0, best = 0;
+  let scoredThisShot = false, touchedThisShot = false, settleTimer = 0;
+  let chart = [];          // faint arcs of previous shots
+  let trail = [];          // live ball trail
+  let net = 0;             // net ripple animation
+  let bobT = 0;            // idle float
+
+  const G = 1500;          // gravity px/s^2
+  const POWER = 5.0;       // drag -> velocity
+  const MAX_PULL = 250;    // max pull 250 * 5.0 = 1250 px/s -> ~1040px range, rim is at most ~670px away
+
+  const $ = id => document.getElementById(id);
+  const hint = $('hint'), call = $('call');
+
+  function moveHoop(){
+    hoop.x = 600 + Math.random()*180;
+    hoop.y = 250 + Math.random()*90;
+  }
+
+  function resetBall(){
+    newSpot();
+    bobT = 0;
+    ball.x = HOME.x; ball.y = HOME.y;
+    ball.vx = 0; ball.vy = 0; ball.spin = 0; ball.spinV = 0;
+    ball.live = false; scoredThisShot = false; touchedThisShot = false; settleTimer = 0;
+    trail = [];
+  }
+
+  function announce(text, color){
+    call.textContent = text;
+    call.style.color = color;
+    call.classList.remove('show');
+    void call.offsetWidth;
+    call.classList.add('show');
+  }
+
+  function updateHUD(){
+    $('score').textContent = score;
+    $('attempts').textContent = attempts;
+    $('streak').textContent = streak;
+    $('best').textContent = best;
+  }
+
+  // ---- Input ---------------------------------------------------------------
+  function pos(e){
+    const r = cv.getBoundingClientRect();
+    return { x:(e.clientX - r.left) * (W / r.width), y:(e.clientY - r.top) * (H / r.height) };
+  }
+
+  cv.addEventListener('pointerdown', e => {
+    if (ball.live) return;
+    const p = pos(e);
+    aiming = true;
+    aimFrom = { x: ball.x, y: ball.y };
+    aimTo = p;
+    cv.setPointerCapture(e.pointerId);
+    hint.classList.add('gone');
+  });
+
+  cv.addEventListener('pointermove', e => { if (aiming) aimTo = pos(e); });
+
+  cv.addEventListener('pointerup', () => {
+    if (!aiming) return;
+    aiming = false;
+    const v = pullVector();
+    if (Math.hypot(v.x, v.y) < 40) return;   // too soft, ignore
+    ball.vx = v.x * POWER; ball.vy = v.y * POWER;
+    ball.spinV = -ball.vx * 0.0008;
+    ball.live = true;
+    attempts++; updateHUD();
+  });
+
+  function pullVector(){
+    let dx = aimFrom.x - aimTo.x, dy = aimFrom.y - aimTo.y;
+    const d = Math.hypot(dx,dy);
+    if (d > MAX_PULL){ dx = dx/d*MAX_PULL; dy = dy/d*MAX_PULL; }
+    return { x:dx, y:dy };
+  }
+
+  // Keys must not scroll the page when embedded in a portal iframe.
+  window.addEventListener('keydown', e => {
+    if ([' ','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key)) e.preventDefault();
+  }, { passive:false });
+
+  // ---- Physics -------------------------------------------------------------
+  function step(dt){
+    if (!ball.live) return;
+
+    ball.vy += G * dt;
+    const px = ball.x, py = ball.y;
+    ball.x += ball.vx * dt;
+    ball.y += ball.vy * dt;
+    ball.spin += ball.spinV;
+
+    trail.push({x:ball.x, y:ball.y});
+    if (trail.length > 26) trail.shift();
+
+    const rimL = { x: hoop.x, y: hoop.y };
+    const rimR = { x: hoop.x + hoop.w, y: hoop.y };
+
+    // backboard
+    const bbX = hoop.x + hoop.w + 6;
+    if (ball.x + BALL_R > bbX && px + BALL_R <= bbX &&
+        ball.y > hoop.y - 130 && ball.y < hoop.y + 12){
+      ball.x = bbX - BALL_R; ball.vx *= -0.62; ball.spinV *= -0.5;
+      touchedThisShot = true;
+    }
+
+    // rim nubs — resolved BEFORE the score check, so clipping the rim deflects
+    // the ball instead of counting. This is what makes the gap real.
+    [rimL, rimR].forEach(n => {
+      const dx = ball.x - n.x, dy = ball.y - n.y;
+      const d = Math.hypot(dx,dy);
+      if (d < BALL_R + 6 && d > 0){
+        const nx = dx/d, ny = dy/d;
+        ball.x = n.x + nx*(BALL_R+6); ball.y = n.y + ny*(BALL_R+6);
+        const dot = ball.vx*nx + ball.vy*ny;
+        ball.vx = (ball.vx - 2*dot*nx) * 0.62;
+        ball.vy = (ball.vy - 2*dot*ny) * 0.62;
+        touchedThisShot = true;
+      }
+    });
+
+    // through the hoop, moving down, fully inside the rim
+    if (!scoredThisShot && py < hoop.y && ball.y >= hoop.y && ball.vy > 0 &&
+        ball.x > rimL.x + BALL_R && ball.x < rimR.x - BALL_R){
+      scoredThisShot = true;
+      score++; streak++; best = Math.max(best, streak);
+      net = 1;
+      announce(touchedThisShot ? 'Good' : 'Swish', touchedThisShot ? C.flood : C.swish);
+      updateHUD();
+    }
+
+    // floor
+    if (ball.y + BALL_R > FLOOR){
+      ball.y = FLOOR - BALL_R;
+      ball.vy *= -0.52; ball.vx *= 0.84; ball.spinV *= 0.7;
+      if (Math.abs(ball.vy) < 60) ball.vy = 0;
+    }
+
+    // walls
+    if (ball.x - BALL_R < 0){ ball.x = BALL_R; ball.vx *= -0.6; }
+    if (ball.x + BALL_R > W){ ball.x = W - BALL_R; ball.vx *= -0.6; }
+
+    // end of possession
+    const resting = ball.y + BALL_R >= FLOOR - 1 && Math.abs(ball.vy) < 30 && Math.abs(ball.vx) < 26;
+    if (resting) settleTimer += dt; else settleTimer = 0;
+
+    if (settleTimer > 0.45){
+      if (!scoredThisShot){
+        if (streak > 0) announce('Miss', C.muted);
+        streak = 0; updateHUD();
+      } else {
+        moveHoop();
+      }
+      chart.push({ pts: trail.slice(), made: scoredThisShot });
+      if (chart.length > 10) chart.shift();
+      resetBall();
+    }
+
+    if (net > 0) net = Math.max(0, net - dt*2.2);
+  }
+
+  // ---- Render --------------------------------------------------------------
+  const VP = { x: 520, y: 300 };   // vanishing point the floor planks converge toward
+
+  function court(){
+    // arena above the floor
+    const g = ctx.createLinearGradient(0, 0, 0, FLOOR);
+    g.addColorStop(0,'#05080F'); g.addColorStop(1,'#0E1730');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, W, FLOOR);
+
+    // floodlight pool behind the rig
+    const fl = ctx.createRadialGradient(hoop.x+hoop.w/2, hoop.y-70, 10, hoop.x+hoop.w/2, hoop.y-70, 400);
+    fl.addColorStop(0,'rgba(255,214,120,.14)'); fl.addColorStop(1,'rgba(255,214,120,0)');
+    ctx.fillStyle = fl; ctx.fillRect(0, 0, W, FLOOR);
+
+    const top = FLOOR, bot = H;
+
+    // ---- hardwood ---------------------------------------------------------
+    const wood = ctx.createLinearGradient(0, top, 0, bot);
+    wood.addColorStop(0,   '#A9682F');
+    wood.addColorStop(0.30,'#C98B4B');
+    wood.addColorStop(1,   '#7E4A22');
+    ctx.fillStyle = wood; ctx.fillRect(0, top, W, bot-top);
+
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, top, W, bot-top); ctx.clip();
+
+    // plank seams converging on the vanishing point
+    const tTop = (top - VP.y) / (bot - VP.y);
+    for (let i=-26; i<=26; i++){
+      const xb = VP.x + i*58;                 // x at the front edge
+      const xt = VP.x + (xb - VP.x) * tTop;   // x at the back edge
+      ctx.strokeStyle = 'rgba(66,33,12,.5)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(xt, top); ctx.lineTo(xb, bot); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,216,158,.13)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(xt+1.5, top); ctx.lineTo(xb+4, bot); ctx.stroke();
+    }
+
+    // butt joints, spaced wider as the boards come toward the camera
+    let y = top + 5, gap = 7;
+    ctx.strokeStyle = 'rgba(66,33,12,.20)'; ctx.lineWidth = 1;
+    while (y < bot){
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+      gap *= 1.42; y += gap;
+    }
+
+    // polished sheen where the floodlight lands
+    const sh = ctx.createRadialGradient(hoop.x+hoop.w/2, top+6, 5, hoop.x+hoop.w/2, top+6, 340);
+    sh.addColorStop(0,'rgba(255,232,178,.26)'); sh.addColorStop(1,'rgba(255,232,178,0)');
+    ctx.fillStyle = sh; ctx.fillRect(0, top, W, bot-top);
+
+    // ---- painted court lines ---------------------------------------------
+    ctx.strokeStyle = 'rgba(250,247,240,.82)'; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(0, top+8); ctx.lineTo(W, top+8); ctx.stroke();   // baseline
+
+    const cx = hoop.x + hoop.w/2;
+    ctx.lineWidth = 3;
+    ctx.beginPath();                                                            // three-point arc
+    ctx.ellipse(cx, top+6, 440, 84, 0, Math.PI*0.04, Math.PI*0.96); ctx.stroke();
+    ctx.strokeStyle = 'rgba(250,247,240,.55)'; ctx.lineWidth = 2.5;
+    ctx.beginPath();                                                            // key / free-throw arc
+    ctx.ellipse(cx, top+6, 186, 38, 0, Math.PI*0.06, Math.PI*0.94); ctx.stroke();
+
+    ctx.restore();
+
+    // shadow the rig casts down onto the boards
+    const cast = ctx.createLinearGradient(0, top, 0, top+70);
+    cast.addColorStop(0,'rgba(20,10,4,.34)'); cast.addColorStop(1,'rgba(20,10,4,0)');
+    ctx.fillStyle = cast; ctx.fillRect(cx-190, top, 380, 70);
+
+    // crisp edge where wood meets the dark
+    ctx.strokeStyle = 'rgba(255,226,180,.35)'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(0, top+1); ctx.lineTo(W, top+1); ctx.stroke();
+  }
+
+  function shotChart(){
+    chart.forEach(s => {
+      ctx.strokeStyle = s.made ? 'rgba(79,209,197,.4)' : 'rgba(180,192,220,.24)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      s.pts.forEach((p,i) => i ? ctx.lineTo(p.x,p.y) : ctx.moveTo(p.x,p.y));
+      ctx.stroke();
+    });
+  }
+
+  function rig(){
+    const bbX = hoop.x + hoop.w + 6;
+
+    // pole + arm
+    ctx.strokeStyle = '#2C3A5E'; ctx.lineWidth = 9; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(W-26, FLOOR); ctx.lineTo(W-26, hoop.y-100); ctx.stroke();
+    ctx.lineWidth = 7;
+    ctx.beginPath(); ctx.moveTo(W-26, hoop.y-96); ctx.lineTo(bbX+8, hoop.y-96); ctx.stroke();
+
+    // backboard
+    ctx.fillStyle = 'rgba(214,228,255,.14)';
+    ctx.fillRect(bbX, hoop.y-124, 8, 136);
+    ctx.strokeStyle = 'rgba(248,250,255,.85)'; ctx.lineWidth = 2.5;
+    ctx.strokeRect(bbX, hoop.y-124, 8, 136);
+    // shooter's square
+    ctx.strokeStyle = 'rgba(255,107,53,.9)'; ctx.lineWidth = 2.5;
+    ctx.strokeRect(bbX-1, hoop.y-56, 10, 44);
+
+    // net
+    const sway = Math.sin(net*Math.PI) * 9;
+    ctx.strokeStyle = 'rgba(255,252,246,.72)'; ctx.lineWidth = 1.6;
+    const segs = 8, depth = 52;
+    for (let i=0;i<=segs;i++){
+      const t = i/segs;
+      const topX = hoop.x + t*hoop.w;
+      const botX = hoop.x + hoop.w*.22 + t*hoop.w*.56 + sway*(t-.5);
+      ctx.beginPath(); ctx.moveTo(topX, hoop.y); ctx.lineTo(botX, hoop.y+depth); ctx.stroke();
+    }
+    for (let r=1;r<=3;r++){
+      const t = r/4, y = hoop.y + depth*t;
+      const inset = hoop.w*.22*t;
+      ctx.beginPath();
+      ctx.moveTo(hoop.x+inset, y);
+      ctx.quadraticCurveTo(hoop.x+hoop.w/2 + sway*.5, y+5, hoop.x+hoop.w-inset, y);
+      ctx.stroke();
+    }
+
+    // rim
+    ctx.strokeStyle = C.rim; ctx.lineWidth = 7; ctx.lineCap='round';
+    ctx.shadowColor = 'rgba(255,107,53,.55)'; ctx.shadowBlur = 10;
+    ctx.beginPath(); ctx.moveTo(hoop.x, hoop.y); ctx.lineTo(hoop.x+hoop.w, hoop.y); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = C.rim;
+    ctx.beginPath(); ctx.arc(hoop.x, hoop.y, 5.5, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(hoop.x+hoop.w, hoop.y, 5.5, 0, Math.PI*2); ctx.fill();
+  }
+
+  function trajectory(){
+    if (!aiming || ball.live) return;
+    const v = pullVector();
+    const power = Math.hypot(v.x,v.y) / MAX_PULL;
+    if (power < 0.12) return;
+
+    let x = ball.x, y = ball.y, vx = v.x*POWER, vy = v.y*POWER;
+    const dt = 1/50;
+    const SHOW = 24;   // ~0.5s of flight only — enough to read the arc, not to solve it
+
+    ctx.save();
+    for (let i=0;i<SHOW;i++){
+      vy += G*dt; x += vx*dt; y += vy*dt;
+      if (y > FLOOR - BALL_R || x > W) break;
+      if (i % 2) continue;
+      const fade = 1 - i/SHOW;
+      ctx.beginPath();
+      ctx.arc(x, y, 1.6 + fade*2.2, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(255,238,206,${fade*0.7})`;
+      ctx.fill();
+    }
+    ctx.restore();
+
+    // pull indicator
+    ctx.strokeStyle = 'rgba(232,98,44,.55)'; ctx.lineWidth = 2;
+    ctx.setLineDash([5,5]);
+    ctx.beginPath(); ctx.moveTo(ball.x, ball.y); ctx.lineTo(ball.x - v.x, ball.y - v.y); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // power arc under the ball
+    ctx.strokeStyle = power > .9 ? C.flood : 'rgba(242,239,230,.35)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, BALL_R+9, -Math.PI*0.5, -Math.PI*0.5 + power*Math.PI*2);
+    ctx.stroke();
+  }
+
+  function ballTrail(){
+    if (!ball.live) return;
+    trail.forEach((p,i) => {
+      const t = i/trail.length;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, BALL_R*0.36*t, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(242,239,230,${0.16*t})`;
+      ctx.fill();
+    });
+  }
+
+  function shadow(){
+    const h = Math.max(0, FLOOR - ball.y);
+    const s = Math.max(0.15, 1 - h/460);
+    ctx.save();
+    ctx.globalAlpha = 0.35 * s;
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.ellipse(ball.x, FLOOR+3, BALL_R*1.15*s, BALL_R*0.3*s, 0, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function frame(dt){
+    ctx.clearRect(0,0,W,H);
+    court();
+    shotChart();
+    rig();
+    trajectory();
+    shadow();
+    ballTrail();
+    drawBall(ctx, ball.x, ball.y, BALL_R, skin, ball.spin);
+  }
+
+  let last = performance.now();
+  function loop(now){
+    const dt = Math.min((now - last)/1000, 1/30);
+    last = now;
+    // Idle float — held still while aiming so the predicted arc doesn't wobble.
+    if (!ball.live && !aiming){
+      bobT += dt;
+      ball.x = HOME.x;
+      ball.y = HOME.y + Math.sin(bobT * 1.7) * 5;
+    }
+    step(dt);
+    frame(dt);
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  // ---- Skin picker ---------------------------------------------------------
+  const rack = document.getElementById('balls');
+  SKINS.forEach((s, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'skin';
+    btn.type = 'button';
+    btn.title = s.name;
+    btn.setAttribute('aria-label', s.name + ' ball');
+    btn.setAttribute('aria-pressed', i === 0 ? 'true' : 'false');
+
+    const c = document.createElement('canvas');
+    const size = 84;
+    c.width = size; c.height = size;
+    const g = c.getContext('2d');
+    g.clearRect(0,0,size,size);
+    if (s.id === 'chalk'){ g.fillStyle = '#0B1020'; g.beginPath(); g.arc(size/2,size/2,size/2,0,Math.PI*2); g.fill(); }
+    drawBall(g, size/2, size/2, size/2 - 6, s, 0);
+    g.strokeStyle = 'rgba(242,239,230,.22)'; g.lineWidth = 2;
+    g.beginPath(); g.arc(size/2, size/2, size/2 - 6, 0, Math.PI*2); g.stroke();
+    btn.appendChild(c);
+
+    btn.addEventListener('click', () => {
+      skin = s;
+      [...rack.children].forEach(b => b.setAttribute('aria-pressed','false'));
+      btn.setAttribute('aria-pressed','true');
+    });
+    rack.appendChild(btn);
+  });
+
+  document.getElementById('reset').addEventListener('click', () => {
+    chart = []; score = 0; attempts = 0; streak = 0; best = 0;
+    updateHUD(); resetBall();
+  });
+
+  updateHUD();
+})();
+</script>
+</body>
+</html>

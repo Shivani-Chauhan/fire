@@ -6,8 +6,8 @@
 
 <!-- ── PRIMARY SEO ─────────────────────────────────────────────── -->
 <title>ZipZap Games — Free Multiplayer Party Games Online</title>
-<meta name="description" content="Play free multiplayer party games with friends online. BLITZ: name something in a category first. PSYCH: fool your friends with fake answers. BLUFF: the classic lying card game. CABO: the low-score memory card game. PICTIONARY: real-time draw & guess. TYPE: a typing speed race. No download needed — join with a room code.">
-<meta name="keywords" content="multiplayer party game online, free browser game, word game with friends, bluffing game, psych game, blitz word game, bluff card game, cheat card game online, cabo card game online, pictionary online, drawing and guessing game, typing race game, typing speed test, online party game, game to play with friends, no download game">
+<meta name="description" content="Play free multiplayer party games with friends online. BLITZ: name something in a category first. PSYCH: fool your friends with fake answers. BLUFF: the classic lying card game. CABO: the low-score memory card game. PICTIONARY: real-time draw & guess. TYPE: a typing speed race. Plus BASKETBALL: a solo hoops arcade game. No download needed — play instantly in your browser.">
+<meta name="keywords" content="multiplayer party game online, free browser game, word game with friends, bluffing game, psych game, blitz word game, bluff card game, cheat card game online, cabo card game online, pictionary online, drawing and guessing game, typing race game, typing speed test, basketball game online, free basketball shooting game, online party game, game to play with friends, no download game">
 <meta name="author" content="ZipZap Games">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://zipzap-games.com/">
@@ -125,6 +125,19 @@
         "url": "https://zipzap-games.com",
         "genre": "Typing Game",
         "numberOfPlayers": { "@type": "QuantitativeValue", "minValue": 1, "maxValue": 8 },
+        "gamePlatform": "Web Browser"
+      }
+    },
+    {
+      "@type": "ListItem",
+      "position": 7,
+      "item": {
+        "@type": "Game",
+        "name": "Basketball Shootout",
+        "description": "A free solo basketball arcade game. Drag to aim and release to shoot — thread the rim from a fresh spot every time you score, chase your best streak, and pick from 12 ball skins. No download or sign-up.",
+        "url": "https://zipzap-games.com/hoops/",
+        "genre": "Arcade Game",
+        "numberOfPlayers": { "@type": "QuantitativeValue", "minValue": 1, "maxValue": 1 },
         "gamePlatform": "Web Browser"
       }
     }
@@ -314,6 +327,8 @@ body.typing-mode #app{max-width:960px}
     <p>One player draws a secret word while everyone else races to guess it in real time. First correct guess wins the round. 2–8 players.</p>
     <h2 style="color:#e2b714;margin-top:24px">TYPE — Typing Speed Race</h2>
     <p>A clean typing speed test. Play solo to measure your WPM and accuracy, or race friends on the same words and watch everyone's live speed. 1–8 players.</p>
+    <h2 style="color:#E8622C;margin-top:24px">BASKETBALL — Solo Hoops Arcade</h2>
+    <p>A free single-player basketball shooting game. Drag to aim, release to shoot, and thread the rim from a new spot every time you score. Chase your best streak with 12 ball skins. <a href="/hoops/" style="color:#E8622C">Play Basketball Shootout</a>.</p>
     <p style="margin-top:24px">Enable JavaScript to play at <strong>zipzap-games.com</strong></p>
   </div>
 </noscript>
@@ -3315,6 +3330,20 @@ function scrHome(){return`
       <span style="color:var(--mu);font-size:12px">🏁 Live race</span>
     </div>
   </div>
+
+  <!-- BASKETBALL card (standalone page at /hoops/) -->
+  <a href="hoops/" style="display:block;text-decoration:none;color:inherit;background:linear-gradient(135deg,#1f0d04,#0F1525);border:2px solid rgba(232,98,44,.35);border-radius:20px;padding:24px;margin-top:16px;cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor='#E8622C'" onmouseout="this.style.borderColor='rgba(232,98,44,.35)'">
+    <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
+      <div class="hf" style="font-size:30px;color:#E8622C;text-shadow:0 0 30px rgba(232,98,44,.5)">BASKETBALL</div>
+      <div style="background:#E8622C;color:#fff;font-size:11px;font-weight:900;padding:3px 10px;border-radius:20px;letter-spacing:1px">SOLO ARCADE</div>
+    </div>
+    <div style="color:var(--te);font-size:14px;font-weight:700;line-height:1.6">Drag to aim, release to shoot 🏀 — then thread the rim from a brand-new spot every time you score. Chase your best streak, unlock the vibe with 12 ball skins. No sign-up, plays instantly.</div>
+    <div style="display:flex;gap:12px;margin-top:14px">
+      <span style="color:var(--mu);font-size:12px">👤 Solo</span>
+      <span style="color:var(--mu);font-size:12px">🏀 Arcade</span>
+      <span style="color:var(--mu);font-size:12px">⚡ Instant</span>
+    </div>
+  </a>
 
   <div style="text-align:center;margin-top:28px;color:var(--mu);font-size:12px">zipzap-games.com · More games coming soon</div>
 </div>`;}
