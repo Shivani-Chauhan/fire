@@ -290,6 +290,10 @@ body.typing-mode #app{max-width:960px}
 @keyframes cbpulse{0%,100%{box-shadow:0 0 0 2px var(--gr)}50%{box-shadow:0 0 0 5px rgba(0,224,150,.35)}}
 .cb-bigcard{width:64px;height:88px;border-radius:10px;background:#fff;color:#12203a;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;font-size:28px;border:2px solid #d7def0;margin:10px auto 0}
 .cb-bigcard small{font-size:10px;color:var(--mu);font-weight:800;margin-top:2px}
+.cb-card.cb-snap{cursor:pointer;box-shadow:0 0 0 2px #FF8A3D;animation:cbsnap .9s infinite}
+@keyframes cbsnap{0%,100%{box-shadow:0 0 0 2px #FF8A3D}50%{box-shadow:0 0 0 5px rgba(255,138,61,.45)}}
+.cb-diffopt{flex:1;background:var(--bg);border:2px solid var(--bd);border-radius:12px;padding:12px;cursor:pointer;transition:border-color .15s;text-align:center}
+.cb-diffopt.on{border-color:var(--gr)}
 </style>
 </head>
 <body>
@@ -2796,7 +2800,6 @@ function bindBluff(){
 // ═══════════════════════════════════════════════════════
 const CB_ROOT="cabo_v1";
 const CB_GR="#00E096";
-const CB_PEEK_SEC=8;
 const CB_RANKS=["A","2","3","4","5","6","7","8","9","10","J","Q","K"];
 const CB_VALS={A:1,"2":2,"3":3,"4":4,"5":5,"6":6,"7":7,"8":8,"9":9,"10":10,J:11,Q:12,K:13};
 function CB_powerOf(rank){
@@ -2807,17 +2810,25 @@ function CB_powerOf(rank){
 }
 const CB_powerLabel={peekSelf:"peek one of your own cards",peekOther:"peek an opponent's card",swap:"swap one of your cards with an opponent's"};
 
-let CB_drawn=null;   // {card} — the card I just drew (LOCAL until I commit)
-let CB_pw=null;      // active power / targeting sub-flow (LOCAL)
-let CB_seen={};      // cid -> true : cards I currently know the value of (LOCAL memory)
+let CB_drawn=null;    // the card I just drew (LOCAL & secret until I commit)
+let CB_pw=null;       // active power / targeting sub-flow (LOCAL)
+let CB_seen={};       // easy mode: cids I permanently know (LOCAL memory aid)
+let CB_glimpse={};    // hard mode: cid -> timestamp until which I can still see it
+let CB_committing=false; // waiting for the host to apply my committed turn
+let CB_snapCool=0;    // local cooldown so a double-tap can't double-penalise
 let CB_lastPhase=null;
+
+const CB_GLIMPSE_MS=2600;      // hard mode: how long a peeked card stays visible
+const CB_SNAP_PENALTY=2;       // points added for a wrong snap
+const CB_POLL=350;             // host action processing interval (ms)
+const CB_PEEK={easy:8,hard:5}; // initial memorise time (s) by difficulty
 
 const CB_stRef=()=>db.ref(`${CB_ROOT}/${roomCode}/state`);
 const CB_acRef=()=>db.ref(`${CB_ROOT}/${roomCode}/actions`);
-const CB_myAcRef=()=>db.ref(`${CB_ROOT}/${roomCode}/actions/${myId}`);
 const CB_write=()=>CB_stRef().set(gs);
 const CB_clean=r=>!r?null:{...r,
-  players:toArr(r.players).map(p=>({...p,hand:toArr(p.hand)})),
+  difficulty:r.difficulty||"easy",
+  players:toArr(r.players).map(p=>({...p,hand:toArr(p.hand),penalty:p.penalty||0})),
   deck:toArr(r.deck),discard:toArr(r.discard),
   result:r.result?{...r.result,totals:r.result.totals||{}}:null,
   lastAction:r.lastAction||null
@@ -2834,21 +2845,43 @@ function CB_deal(players){
 }
 function CB_nextPlayer(id){const n=gs.players.length;let i=gs.players.findIndex(p=>p.id===id);if(i<0)i=0;return gs.players[(i+1)%n].id;}
 
+// ── memory (difficulty-aware): record & query what I can currently see ──
+function CB_learn(cid){
+  if((gs&&gs.difficulty)==="hard"){ CB_glimpse[cid]=ms()+CB_GLIMPSE_MS; setTimeout(()=>{ if(currentGame==="cabo"&&gs&&gs.phase==="turn") render(); }, CB_GLIMPSE_MS+60); }
+  else { CB_seen[cid]=true; }
+}
+function CB_visible(cid){
+  if(gs&&gs.phase==="reveal") return true;
+  if((gs&&gs.difficulty)==="hard") return (CB_glimpse[cid]||0)>ms();
+  return !!CB_seen[cid];
+}
+
 async function CB_createRoom(){
-  roomCode=rc();isHost=true;CB_seen={};CB_drawn=null;CB_pw=null;CB_lastPhase=null;
-  gs={phase:"lobby",players:[{id:myId,name:myName,av:myAv}],deck:[],discard:[],turn:null,caboBy:null,caboName:null,result:null,peekEnd:null,lastAction:null};
+  roomCode=rc();isHost=true;CB_seen={};CB_glimpse={};CB_drawn=null;CB_pw=null;CB_committing=false;CB_lastPhase=null;
+  gs={phase:"lobby",difficulty:"easy",players:[{id:myId,name:myName,av:myAv,penalty:0}],deck:[],discard:[],turn:null,caboBy:null,caboName:null,result:null,peekEnd:null,lastAction:null};
   await CB_stRef().set(gs);
-  actTimer=setInterval(CB_processActions,600);
+  actTimer=setInterval(CB_processActions,CB_POLL);
   listenToState(roomCode,CB_ROOT,CB_clean);render();
 }
 async function CB_joinRoom(code){
-  roomCode=code;isHost=false;CB_seen={};CB_drawn=null;CB_pw=null;CB_lastPhase=null;
+  roomCode=code;isHost=false;CB_seen={};CB_glimpse={};CB_drawn=null;CB_pw=null;CB_committing=false;CB_lastPhase=null;
   const snap=await db.ref(`${CB_ROOT}/${code}/state`).once("value");
   if(!snap.exists()){toast("Room not found!","err");roomCode="";render();return;}
   const data=CB_clean(snap.val());
   if(data.phase!=="lobby"){toast("Game already started!","err");roomCode="";render();return;}
-  gs=data;await CB_myAcRef().set({type:"JOIN",name:myName,av:myAv,_ts:ms()});
+  gs=data;await CB_acRef().push({pid:myId,type:"JOIN",name:myName,av:myAv,_ts:ms()});
   listenToState(code,CB_ROOT,CB_clean);render();
+}
+async function CB_setDifficulty(mode){
+  if(!isHost||!gs||gs.phase!=="lobby")return;
+  gs.difficulty=mode;await CB_write();render();
+}
+
+// ── Host is the SINGLE writer. Everyone sends actions; the host applies them,
+//    which lets any player snap at any time without state races. ──
+async function CB_send(action){
+  if(isHost){ if(CB_apply(myId,action)){ await CB_write(); render(); } }
+  else{ await CB_acRef().push({pid:myId,...action,_ts:ms()}); }
 }
 async function CB_processActions(){
   if(!isHost||!gs)return;
@@ -2856,89 +2889,79 @@ async function CB_processActions(){
   try{
     const snap=await CB_acRef().once("value");const acts=snap.val();
     if(acts){
-      for(const[pid,act]of Object.entries(acts)){
-        if(!act||!act.type)continue;
-        db.ref(`${CB_ROOT}/${roomCode}/actions/${pid}`).remove();
-        if(act.type==="JOIN"&&gs.phase==="lobby"&&!gs.players.find(p=>p.id===pid)){gs.players.push({id:pid,name:act.name,av:act.av});dirty=true;}
+      for(const k of Object.keys(acts).sort()){          // push keys sort chronologically
+        const a=acts[k]; db.ref(`${CB_ROOT}/${roomCode}/actions/${k}`).remove();
+        if(a&&a.pid&&a.type){ if(CB_apply(a.pid,a)) dirty=true; }
       }
     }
   }catch(e){}
-  // host drives the global peek→turn transition
+  // reshuffle the discard back into the deck when it runs dry
+  if(gs.phase==="turn" && (!gs.deck||gs.deck.length===0) && (gs.discard||[]).length>1){
+    const top=gs.discard[gs.discard.length-1]; gs.deck=shuffle(gs.discard.slice(0,-1)); gs.discard=[top]; dirty=true;
+  }
+  // drive the global peek→turn transition
   if(gs.phase==="peek"&&gs.peekEnd&&ms()>=gs.peekEnd){gs.phase="turn";gs.peekEnd=null;dirty=true;}
   if(dirty){await CB_write();render();}
 }
-async function CB_startGame(){
-  if(gs.players.length<2){toast("Need 2+ players","err");return;}
-  const {hands,deck,discard}=CB_deal(gs.players);
-  gs.players=gs.players.map((p,i)=>({...p,hand:hands[i]}));
-  gs.deck=deck;gs.discard=discard;gs.turn=gs.players[0].id;
-  gs.caboBy=null;gs.caboName=null;gs.result=null;gs.lastAction=null;
-  gs.phase="peek";gs.peekEnd=ms()+CB_PEEK_SEC*1000;
-  await CB_write();render();
-}
-async function CB_rematch(){
-  const {hands,deck,discard}=CB_deal(gs.players);
-  gs.players=gs.players.map((p,i)=>({...p,hand:hands[i]}));
-  gs.deck=deck;gs.discard=discard;gs.turn=gs.players[0].id;
-  gs.caboBy=null;gs.caboName=null;gs.result=null;gs.lastAction=null;
-  gs.phase="peek";gs.peekEnd=ms()+CB_PEEK_SEC*1000;
-  CB_seen={};CB_drawn=null;CB_pw=null;
-  await CB_write();render();
-}
 
-// ── Turn actions (the current player writes state directly — nobody else acts) ──
-async function CB_draw(){
-  if(gs.turn!==myId||gs.phase!=="turn"||CB_drawn||CB_pw)return;
-  if(!gs.deck||gs.deck.length===0){
-    if((gs.discard||[]).length>1){const top=gs.discard[gs.discard.length-1];gs.deck=shuffle(gs.discard.slice(0,-1));gs.discard=[top];await CB_write();}
-    else{toast("No cards left to draw","err");return;}
+// ── State transitions (host only) ──
+function CB_apply(pid,a){
+  if(!a||!a.type)return false;
+  if(a.type==="JOIN"){ if(gs.phase==="lobby"&&!gs.players.find(p=>p.id===pid)){gs.players.push({id:pid,name:a.name,av:a.av,penalty:0});return true;} return false; }
+  if(a.type==="MATCH"){ return CB_applyMatch(pid,a.cid); }
+  if(a.type==="CABO"){
+    if(gs.phase!=="turn"||gs.turn!==pid||gs.caboBy)return false;
+    const nm=(gs.players.find(p=>p.id===pid)||{}).name;
+    gs.caboBy=pid;gs.caboName=nm;
+    gs.lastAction={byName:nm,text:"called CABO! 🔔 Everyone gets one last turn"};
+    CB_advance(pid);return true;
   }
-  CB_drawn={card:gs.deck[gs.deck.length-1]};
-  CB_seen[CB_drawn.card.cid]=true;
-  render();
+  if(a.type==="TURN"){ return CB_applyTurn(pid,a.move); }
+  return false;
 }
-function CB_beginSwapIn(){if(!CB_drawn)return;CB_pw={type:"chooseSwapSlot"};render();}
-async function CB_swapIn(slot){
-  if(!CB_drawn)return;
-  const me=gs.players.find(p=>p.id===myId);const drawn=CB_drawn.card;const old=me.hand[slot];
-  gs.deck=gs.deck.filter(c=>c.cid!==drawn.cid);
-  me.hand[slot]=drawn;gs.discard=[...gs.discard,old];
-  CB_seen[drawn.cid]=true;delete CB_seen[old.cid];
-  gs.lastAction={byName:myName,text:`swapped in a card and discarded a ${old.rank}`};
-  await CB_endTurn();
+function CB_applyTurn(pid,move){
+  if(gs.phase!=="turn"||gs.turn!==pid||!move)return false;
+  const me=gs.players.find(p=>p.id===pid);if(!me)return false;
+  const di=(gs.deck||[]).findIndex(c=>c.cid===move.drawnCid);if(di<0)return false;
+  const drawn=gs.deck[di];const nm=me.name;
+  if(move.kind==="swap"){
+    const ti=me.hand.findIndex(c=>c.cid===move.targetCid);if(ti<0)return false;
+    const old=me.hand[ti];gs.deck.splice(di,1);me.hand[ti]=drawn;gs.discard=[...gs.discard,old];
+    gs.lastAction={byName:nm,text:`swapped in a card and discarded a ${old.rank}`};
+  }else if(move.kind==="discard"){
+    gs.deck.splice(di,1);gs.discard=[...gs.discard,drawn];
+    const pw=CB_powerOf(drawn.rank);
+    gs.lastAction={byName:nm,text:pw?`discarded a ${drawn.rank} and used its power`:`discarded a ${drawn.rank}`};
+  }else if(move.kind==="discardSwap"){
+    gs.deck.splice(di,1);gs.discard=[...gs.discard,drawn];
+    const opp=gs.players.find(p=>p.id===move.oppId);
+    if(opp){const mi=me.hand.findIndex(c=>c.cid===move.myCid);const oi=opp.hand.findIndex(c=>c.cid===move.oppCid);if(mi>=0&&oi>=0){const t=me.hand[mi];me.hand[mi]=opp.hand[oi];opp.hand[oi]=t;}}
+    gs.lastAction={byName:nm,text:`discarded a ${drawn.rank} and swapped a card`};
+  }else return false;
+  CB_advance(pid);return true;
 }
-async function CB_discardDrawn(){
-  if(!CB_drawn)return;
-  const drawn=CB_drawn.card;
-  gs.deck=gs.deck.filter(c=>c.cid!==drawn.cid);
-  gs.discard=[...gs.discard,drawn];
-  const pw=CB_powerOf(drawn.rank);
-  if(pw){gs.lastAction={byName:myName,text:`discarded a ${drawn.rank} — using its power`};CB_drawn=null;CB_pw={type:pw};await CB_write();render();}
-  else{gs.lastAction={byName:myName,text:`discarded a ${drawn.rank}`};CB_drawn=null;await CB_endTurn();}
+function CB_applyMatch(pid,cid){
+  if(gs.phase!=="turn")return false;                     // snapping only during play
+  const me=gs.players.find(p=>p.id===pid);if(!me)return false;
+  const idx=(me.hand||[]).findIndex(c=>c.cid===cid);if(idx<0)return false;  // already gone
+  const card=me.hand[idx];
+  const top=(gs.discard&&gs.discard.length)?gs.discard[gs.discard.length-1]:null;
+  if(top&&card.rank===top.rank){
+    me.hand.splice(idx,1);gs.discard=[...gs.discard,card];
+    gs.lastAction={byName:me.name,text:`snapped a ${card.rank}! 🔥`};
+  }else{
+    me.penalty=(me.penalty||0)+CB_SNAP_PENALTY;
+    gs.lastAction={byName:me.name,text:`mis-snapped — +${CB_SNAP_PENALTY} penalty 😬`};
+  }
+  return true;
 }
-async function CB_doSwap(mySlot,oppId,oppSlot){
-  const me=gs.players.find(p=>p.id===myId);const opp=gs.players.find(p=>p.id===oppId);
-  const a=me.hand[mySlot],b=opp.hand[oppSlot];
-  me.hand[mySlot]=b;opp.hand[oppSlot]=a;
-  gs.lastAction={byName:myName,text:`swapped a card with ${opp.name}`};
-  await CB_endTurn();
-}
-async function CB_callCabo(){
-  if(gs.turn!==myId||gs.phase!=="turn"||gs.caboBy||CB_drawn||CB_pw)return;
-  gs.caboBy=myId;gs.caboName=myName;
-  gs.lastAction={byName:myName,text:`called CABO! 🔔 Everyone gets one last turn`};
-  gs.turn=CB_nextPlayer(gs.turn);
-  await CB_write();render();
-}
-async function CB_endTurn(){
-  CB_drawn=null;CB_pw=null;
-  const nxt=CB_nextPlayer(gs.turn);
-  if(gs.caboBy&&nxt===gs.caboBy){CB_computeReveal();}
-  else{gs.turn=nxt;gs.phase="turn";}
-  await CB_write();render();
+function CB_advance(fromId){
+  const nxt=CB_nextPlayer(fromId);
+  if(gs.caboBy&&nxt===gs.caboBy){ CB_computeReveal(); }
+  else { gs.turn=nxt; gs.phase="turn"; }
 }
 function CB_computeReveal(){
-  const totals={};gs.players.forEach(p=>{totals[p.id]=p.hand.reduce((s,c)=>s+(c.val||0),0);});
+  const totals={};gs.players.forEach(p=>{totals[p.id]=(p.hand||[]).reduce((s,c)=>s+(c.val||0),0)+(p.penalty||0);});
   let min=Infinity;gs.players.forEach(p=>{if(totals[p.id]<min)min=totals[p.id];});
   const lowIds=gs.players.filter(p=>totals[p.id]===min).map(p=>p.id);
   const winnerId=lowIds.includes(gs.caboBy)?gs.caboBy:lowIds[0];
@@ -2946,16 +2969,67 @@ function CB_computeReveal(){
   gs.result={totals,winnerId,winnerName:w?w.name:"?",winnerAv:w?w.av:"",caboBy:gs.caboBy,caboName:gs.caboName,caboSuccess:!!gs.caboBy&&lowIds.includes(gs.caboBy)};
   gs.phase="reveal";gs.turn=null;
 }
-// A player taps a card during a targeting sub-flow
+
+async function CB_startGame(){
+  if(gs.players.length<2){toast("Need 2+ players","err");return;}
+  const {hands,deck,discard}=CB_deal(gs.players);
+  gs.players=gs.players.map((p,i)=>({...p,hand:hands[i],penalty:0}));
+  gs.deck=deck;gs.discard=discard;gs.turn=gs.players[0].id;
+  gs.caboBy=null;gs.caboName=null;gs.result=null;gs.lastAction=null;
+  gs.phase="peek";gs.peekEnd=ms()+(CB_PEEK[gs.difficulty||"easy"]||8)*1000;
+  await CB_write();render();
+}
+async function CB_rematch(){
+  const {hands,deck,discard}=CB_deal(gs.players);
+  gs.players=gs.players.map((p,i)=>({...p,hand:hands[i],penalty:0}));
+  gs.deck=deck;gs.discard=discard;gs.turn=gs.players[0].id;
+  gs.caboBy=null;gs.caboName=null;gs.result=null;gs.lastAction=null;
+  gs.phase="peek";gs.peekEnd=ms()+(CB_PEEK[gs.difficulty||"easy"]||8)*1000;
+  CB_seen={};CB_glimpse={};CB_drawn=null;CB_pw=null;CB_committing=false;
+  await CB_write();render();
+}
+
+// ── Local turn flow (current player). Commits are sent to the host as actions. ──
+async function CB_draw(){
+  if(gs.turn!==myId||gs.phase!=="turn"||CB_drawn||CB_pw||CB_committing)return;
+  if(!gs.deck||gs.deck.length===0){ toast("Deck reshuffling — tap again","info"); return; }
+  CB_drawn={card:gs.deck[gs.deck.length-1]};
+  CB_learn(CB_drawn.card.cid);       // I've seen my drawn card
+  render();
+}
+function CB_beginSwapIn(){ if(!CB_drawn)return; const me=gs.players.find(p=>p.id===myId); if(!me||!me.hand.length){toast("No cards to swap — discard it instead","err");return;} CB_pw={type:"chooseSwapSlot"};render(); }
+function CB_discardDrawn(){
+  if(!CB_drawn)return;
+  const pw=CB_powerOf(CB_drawn.card.rank);
+  if(pw==="peekSelf"||pw==="peekOther"||pw==="swap"){ CB_pw={type:pw}; render(); }
+  else { CB_commitTurn({kind:"discard",drawnCid:CB_drawn.card.cid}); }
+}
+function CB_commitTurn(move){
+  CB_committing=true; CB_drawn=null; CB_pw=null;
+  CB_send({type:"TURN",move}); render();
+  setTimeout(()=>{ if(CB_committing&&gs&&gs.turn!==myId){CB_committing=false;render();} },4000);
+}
+function CB_callCabo(){
+  if(gs.turn!==myId||gs.phase!=="turn"||gs.caboBy||CB_drawn||CB_pw||CB_committing)return;
+  CB_committing=true; CB_send({type:"CABO"}); render();
+}
+function CB_snap(cid){
+  if(!gs||gs.phase!=="turn")return;
+  if(ms()<CB_snapCool)return;
+  CB_snapCool=ms()+700;
+  CB_send({type:"MATCH",cid});
+}
+// Tap handler for the board during a turn targeting sub-flow
 function CB_target(owner,slot){
-  if(!CB_pw||gs.turn!==myId)return;
+  if(!CB_pw||gs.turn!==myId||!CB_drawn)return;
   const t=CB_pw.type;
-  if(t==="chooseSwapSlot"){if(owner===myId)CB_swapIn(slot);return;}
-  if(t==="peekSelf"){if(owner===myId){const c=gs.players.find(p=>p.id===myId).hand[slot];CB_seen[c.cid]=true;CB_pw={type:t,peekedCid:c.cid};render();}return;}
-  if(t==="peekOther"){if(owner!==myId){const c=gs.players.find(p=>p.id===owner).hand[slot];CB_seen[c.cid]=true;CB_pw={type:t,peekedCid:c.cid};render();}return;}
+  const card=(gs.players.find(p=>p.id===owner)||{hand:[]}).hand[slot]; if(!card)return;
+  if(t==="chooseSwapSlot"){ if(owner===myId) CB_commitTurn({kind:"swap",drawnCid:CB_drawn.card.cid,targetCid:card.cid}); return; }
+  if(t==="peekSelf"){ if(owner===myId){ CB_learn(card.cid); CB_pw={type:t,peekedCid:card.cid}; render(); } return; }
+  if(t==="peekOther"){ if(owner!==myId){ CB_learn(card.cid); CB_pw={type:t,peekedCid:card.cid}; render(); } return; }
   if(t==="swap"){
-    if(CB_pw.mySlot==null){if(owner===myId){CB_pw={type:t,mySlot:slot};render();}}
-    else if(owner!==myId){CB_doSwap(CB_pw.mySlot,owner,slot);}
+    if(!CB_pw.myCid){ if(owner===myId){ CB_pw={type:t,myCid:card.cid}; render(); } }
+    else if(owner!==myId){ CB_commitTurn({kind:"discardSwap",drawnCid:CB_drawn.card.cid,myCid:CB_pw.myCid,oppId:owner,oppCid:card.cid}); }
   }
 }
 
@@ -2975,38 +3049,46 @@ function CB_scrSetup(){return`
     <input class="inp" id="cb-ji" placeholder="CODE" maxlength="4" style="flex:1;text-transform:uppercase;letter-spacing:8px;text-align:center;font-size:22px">
     <button class="btn" id="cb-jbtn" style="background:var(--ca2);color:var(--te);border:2px solid var(--bd);width:auto;padding:14px 20px;font-size:16px;flex-shrink:0">Join →</button>
   </div>
-  <div class="card" style="margin-top:18px"><span class="lbl">How to play</span><div style="color:var(--mu);font-size:12px;line-height:1.7">Everyone gets 4 cards & peeks at 2. On your turn, draw one — <b style="color:var(--te)">swap</b> it into your hand or <b style="color:var(--te)">discard</b> it to use its power (7-8 peek own · 9-10 peek other · J-Q-K swap). Low cards are good. Call <b style="color:${CB_GR}">Cabo</b> when you think you're lowest — smallest total wins!</div></div>
+  <div class="card" style="margin-top:18px"><span class="lbl">How to play</span><div style="color:var(--mu);font-size:12px;line-height:1.7">Everyone gets 4 cards & peeks at 2. On your turn, draw one — <b style="color:var(--te)">swap</b> it into your hand or <b style="color:var(--te)">discard</b> it to use its power (7-8 peek own · 9-10 peek other · J-Q-K swap). See a card matching the one on the table? <b style="color:#FF8A3D">Snap</b> it any time to throw it — but a wrong guess costs +${CB_SNAP_PENALTY}. Low cards are good. Call <b style="color:${CB_GR}">Cabo</b> when you think you're lowest — smallest total wins!</div></div>
 </div>`;}
 
 function CB_scrLobby(){
   const rows=gs.players.map((p,i)=>`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;${i<gs.players.length-1?"border-bottom:1px solid var(--bd)":""}"><span style="font-size:24px">${p.av}</span><span style="font-weight:800;font-size:15px;flex:1">${p.name}${p.id===myId?' <span style="color:var(--mu);font-size:11px">(you)</span>':""}</span>${i===0?`<span style="background:${CB_GR};color:#000;font-size:10px;font-weight:900;padding:2px 10px;border-radius:20px">HOST</span>`:""}</div>`).join("");
-  return`<div class="fade" style="padding-top:20px"><div style="text-align:center;margin-bottom:30px"><span class="lbl">Room Code</span><div class="hf" style="font-size:72px;color:${CB_GR};letter-spacing:16px;line-height:1;text-shadow:0 0 50px rgba(0,224,150,.3)">${roomCode}</div><div style="color:var(--mu);font-size:13px;margin-top:8px">Share this code with friends</div><button class="btn" onclick="zzShareSheet(currentGame,roomCode)" style="display:inline-block;width:auto;background:var(--ca2);color:var(--te);border:1px solid var(--bd);margin-top:14px;padding:11px 22px;font-size:14px;font-weight:800">🔗 Invite friends</button></div><div class="card" style="margin-bottom:20px"><span class="lbl">Players · <span id="cb-pc">${gs.players.length}</span></span><div id="cb-players">${rows}</div></div>${isHost?`<button class="btn" id="cb-start" style="background:${CB_GR};color:#000;font-size:17px;padding:16px" ${gs.players.length>=2?"":"disabled"}>${gs.players.length>=2?"Deal & Start →":"Waiting for 2+ players…"}</button><div style="color:var(--mu);font-size:12px;text-align:center;margin-top:8px">2–8 players · each dealt 4 cards</div>`:`<div style="text-align:center;color:var(--mu);font-size:16px;padding:20px"><span class="blink">⏳</span> Waiting for host…</div>`}</div>`;
+  const diff=gs.difficulty||"easy";
+  const dopt=(val,title,sub)=>`<div class="cb-diffopt${diff===val?" on":""}" ${isHost?`data-diff="${val}"`:""}><div style="font-weight:900;font-size:14px;color:${diff===val?CB_GR:"var(--te)"}">${title}</div><div style="color:var(--mu);font-size:11px;margin-top:3px;line-height:1.4">${sub}</div></div>`;
+  const diffCard=`<div class="card" style="margin-bottom:16px"><span class="lbl">Difficulty ${isHost?"":"(host picks)"}</span><div style="display:flex;gap:10px">${dopt("easy","Easy","Your peeked cards stay visible all game")}${dopt("hard","Hard","You glimpse cards briefly — then memory only")}</div></div>`;
+  return`<div class="fade" style="padding-top:20px"><div style="text-align:center;margin-bottom:30px"><span class="lbl">Room Code</span><div class="hf" style="font-size:72px;color:${CB_GR};letter-spacing:16px;line-height:1;text-shadow:0 0 50px rgba(0,224,150,.3)">${roomCode}</div><div style="color:var(--mu);font-size:13px;margin-top:8px">Share this code with friends</div><button class="btn" onclick="zzShareSheet(currentGame,roomCode)" style="display:inline-block;width:auto;background:var(--ca2);color:var(--te);border:1px solid var(--bd);margin-top:14px;padding:11px 22px;font-size:14px;font-weight:800">🔗 Invite friends</button></div><div class="card" style="margin-bottom:16px"><span class="lbl">Players · <span id="cb-pc">${gs.players.length}</span></span><div id="cb-players">${rows}</div></div>${diffCard}${isHost?`<button class="btn" id="cb-start" style="background:${CB_GR};color:#000;font-size:17px;padding:16px" ${gs.players.length>=2?"":"disabled"}>${gs.players.length>=2?"Deal & Start →":"Waiting for 2+ players…"}</button><div style="color:var(--mu);font-size:12px;text-align:center;margin-top:8px">2–8 players · each dealt 4 cards</div>`:`<div style="text-align:center;color:var(--mu);font-size:16px;padding:20px"><span class="blink">⏳</span> Waiting for host…</div>`}</div>`;
 }
 
 function CB_scrPeek(){
   const me=gs.players.find(p=>p.id===myId);
-  if(me){if(me.hand[2])CB_seen[me.hand[2].cid]=true;if(me.hand[3])CB_seen[me.hand[3].cid]=true;}
+  // Easy: remember the two peeked cards for the whole game. Hard: only see them now.
+  if(me && (gs.difficulty||"easy")!=="hard"){ if(me.hand[2])CB_seen[me.hand[2].cid]=true; if(me.hand[3])CB_seen[me.hand[3].cid]=true; }
   const cards=me?me.hand.map((c,i)=>`<div class="cb-card ${i>=2?"":"cb-down"}">${i>=2?c.rank:""}</div>`).join(""):"";
+  const hard=(gs.difficulty||"easy")==="hard";
   return`<div class="fade" style="padding-top:24px">
     <div style="text-align:center;margin-bottom:20px">
       <div class="hf" style="font-size:30px;color:${CB_GR}">Memorize!</div>
-      <div style="color:var(--mu);font-size:14px;margin-top:6px">Peek at your two bottom cards · <span id="cb-peekc" style="color:${CB_GR};font-weight:900">${CB_PEEK_SEC}</span>s</div>
+      <div style="color:var(--mu);font-size:14px;margin-top:6px">Peek at your two bottom cards · <span id="cb-peekc" style="color:${CB_GR};font-weight:900">${CB_PEEK[gs.difficulty||"easy"]||8}</span>s</div>
     </div>
     <div class="cb-cards" style="justify-content:center">${cards}</div>
-    <div style="text-align:center;color:var(--mu);font-size:12px;margin-top:16px">The other two stay hidden. Remember what you've got!</div>
+    <div style="text-align:center;color:var(--mu);font-size:12px;margin-top:16px">${hard?"Hard mode — burn them into memory, they'll vanish!":"The other two stay hidden. Remember what you've got!"}</div>
   </div>`;
 }
 
+// targeting: turn sub-flow ("myslot"/"self"/"other"). When null and it's play
+// time, your own cards become snap-tappable (throw a match onto the table).
 function CB_board(targeting){
+  const canSnap=gs.phase==="turn"&&!targeting&&!CB_committing;
   return`<div style="margin-bottom:14px">`+gs.players.map(p=>{
     const isMe=p.id===myId;const isTurn=gs.turn===p.id&&gs.phase==="turn";
     const cards=p.hand.map((c,slot)=>{
-      const seen=!!CB_seen[c.cid];
-      let clickable=false;
-      if(targeting==="myslot"&&isMe)clickable=true;
-      else if(targeting==="self"&&isMe)clickable=true;
-      else if(targeting==="other"&&!isMe)clickable=true;
-      return`<div class="cb-card${seen?"":" cb-down"}${clickable?" cb-click":""}" ${clickable?`data-owner="${p.id}" data-slot="${slot}"`:""}>${seen?c.rank:""}</div>`;
+      const vis=CB_visible(c.cid);
+      let cls="cb-card"+(vis?"":" cb-down"),attrs="";
+      if((targeting==="myslot"||targeting==="self")&&isMe){cls+=" cb-click";attrs=`data-owner="${p.id}" data-slot="${slot}"`;}
+      else if(targeting==="other"&&!isMe){cls+=" cb-click";attrs=`data-owner="${p.id}" data-slot="${slot}"`;}
+      else if(canSnap&&isMe){cls+=" cb-snap";attrs=`data-snap="${c.cid}"`;}
+      return`<div class="${cls}" ${attrs}>${vis?c.rank:""}</div>`;
     }).join("");
     return`<div class="cb-prow ${isTurn?"on":""}"><div class="cb-phead"><span>${p.av}</span><span style="flex:1">${p.name}${isMe?' <span style="color:var(--mu);font-size:10px">(you)</span>':""}</span>${p.id===gs.caboBy?'<span class="cb-cabotag">CABO</span>':""}${isTurn?`<span class="blink" style="color:${CB_GR}">●</span>`:""}</div><div class="cb-cards">${cards}</div></div>`;
   }).join("")+`</div>`;
@@ -3015,36 +3097,39 @@ function CB_board(targeting){
 function CB_scrTurn(){
   const myTurn=gs.turn===myId;
   const turnP=gs.players.find(p=>p.id===gs.turn);
+  const me=gs.players.find(p=>p.id===myId);
   const top=(gs.discard&&gs.discard.length)?gs.discard[gs.discard.length-1]:null;
   let targeting=null;
-  if(myTurn&&CB_pw){
+  if(myTurn&&CB_pw&&!CB_committing){
     if(CB_pw.type==="chooseSwapSlot")targeting="myslot";
     else if(CB_pw.type==="peekSelf")targeting=CB_pw.peekedCid?null:"self";
     else if(CB_pw.type==="peekOther")targeting=CB_pw.peekedCid?null:"other";
-    else if(CB_pw.type==="swap")targeting=CB_pw.mySlot==null?"myslot":"other";
+    else if(CB_pw.type==="swap")targeting=CB_pw.myCid?"other":"myslot";
   }
   let panel="";
-  if(!myTurn){
+  if(CB_committing){
+    panel=`<div style="text-align:center;color:var(--mu);font-size:15px;padding:16px"><span class="blink">⏳</span> Committing…</div>`;
+  }else if(!myTurn){
     panel=`<div style="text-align:center;color:var(--mu);font-size:15px;padding:14px"><span class="blink">⏳</span> Waiting for <b>${turnP?turnP.name:"…"}</b>…</div>`;
-  }else if(CB_drawn){
-    const d=CB_drawn.card;const pw=CB_powerOf(d.rank);
-    panel=`<div class="card" style="text-align:center;margin-bottom:12px;border-color:${CB_GR}">
-      <span class="lbl">You drew</span>
-      <div class="cb-bigcard">${d.rank}<small>worth ${d.val}</small></div>
-      ${pw?`<div style="color:${CB_GR};font-size:12px;font-weight:800;margin-top:10px">Discard to ${CB_powerLabel[pw]}</div>`:`<div style="color:var(--mu);font-size:12px;margin-top:10px">No special power</div>`}
-      <div class="g2" style="margin-top:14px">
-        <button class="btn" id="cb-swapin" style="background:${CB_GR};color:#000">Swap into hand</button>
-        <button class="btn" id="cb-discard" style="background:var(--ca2);color:var(--te);border:2px solid var(--bd)">Discard${pw?" + power":""}</button>
-      </div>
-    </div>`;
   }else if(CB_pw){
     let instr="";
     if(CB_pw.type==="chooseSwapSlot")instr="Tap one of your cards to replace with the drawn card";
     else if(CB_pw.type==="peekSelf")instr="Tap one of your own cards to peek at it";
     else if(CB_pw.type==="peekOther")instr="Tap an opponent's card to peek at it";
-    else if(CB_pw.type==="swap")instr=CB_pw.mySlot==null?"Tap one of YOUR cards to give away":"Now tap an OPPONENT's card to take";
+    else if(CB_pw.type==="swap")instr=CB_pw.myCid?"Now tap an OPPONENT's card to take":"Tap one of YOUR cards to give away";
     const peeked=CB_pw.peekedCid?gs.players.flatMap(p=>p.hand).find(c=>c.cid===CB_pw.peekedCid):null;
-    panel=`<div class="card" style="text-align:center;margin-bottom:12px;border-color:${CB_GR}">${peeked?`<span class="lbl">You peeked</span><div class="cb-bigcard">${peeked.rank}<small>worth ${peeked.val}</small></div><button class="btn" id="cb-donepeek" style="background:${CB_GR};color:#000;margin-top:14px">Done</button>`:`<div style="color:${CB_GR};font-weight:800;font-size:15px;padding:6px">${instr}</div>`}</div>`;
+    panel=`<div class="card" style="text-align:center;margin-bottom:12px;border-color:${CB_GR}">${peeked?`<span class="lbl">You peeked · remember it!</span><div class="cb-bigcard">${peeked.rank}<small>worth ${peeked.val}</small></div><button class="btn" id="cb-donepeek" style="background:${CB_GR};color:#000;margin-top:14px">Done</button>`:`<div style="color:${CB_GR};font-weight:800;font-size:15px;padding:6px">${instr}</div>`}</div>`;
+  }else if(CB_drawn){
+    const d=CB_drawn.card;const pw=CB_powerOf(d.rank);const canSwap=me&&me.hand.length>0;
+    panel=`<div class="card" style="text-align:center;margin-bottom:12px;border-color:${CB_GR}">
+      <span class="lbl">You drew</span>
+      <div class="cb-bigcard">${d.rank}<small>worth ${d.val}</small></div>
+      ${pw?`<div style="color:${CB_GR};font-size:12px;font-weight:800;margin-top:10px">Discard to ${CB_powerLabel[pw]}</div>`:`<div style="color:var(--mu);font-size:12px;margin-top:10px">No special power</div>`}
+      <div class="${canSwap?"g2":""}" style="margin-top:14px">
+        ${canSwap?`<button class="btn" id="cb-swapin" style="background:${CB_GR};color:#000">Swap into hand</button>`:""}
+        <button class="btn" id="cb-discard" style="background:var(--ca2);color:var(--te);border:2px solid var(--bd)">Discard${pw?" + power":""}</button>
+      </div>
+    </div>`;
   }else{
     panel=`<div class="card" style="margin-bottom:12px">
       <div style="text-align:center;color:var(--te);font-weight:800;margin-bottom:12px">Your turn</div>
@@ -3052,7 +3137,8 @@ function CB_scrTurn(){
       ${gs.caboBy?`<div style="text-align:center;color:var(--mu);font-size:12px">Cabo already called</div>`:`<button class="btn" id="cb-cabo" style="background:var(--ca2);color:var(--y);border:2px solid rgba(255,230,0,.3);font-size:15px">🔔 Call Cabo!</button><div style="text-align:center;color:var(--mu);font-size:11px;margin-top:6px">Call if you think you have the lowest total</div>`}
     </div>`;
   }
-  const disc=top?`<div style="text-align:center;margin-bottom:14px"><span class="lbl">Discard top</span><div class="cb-card" style="margin:0 auto">${top.rank}</div></div>`:"";
+  const canSnap=gs.phase==="turn"&&!targeting&&!CB_committing&&top;
+  const disc=top?`<div style="text-align:center;margin-bottom:10px"><span class="lbl">On the table</span><div class="cb-card" style="margin:0 auto">${top.rank}</div>${canSnap?`<div style="color:#FF8A3D;font-size:12px;font-weight:800;margin-top:8px">🔥 Tap a matching card of yours to snap it! <span style="color:var(--mu);font-weight:600">(wrong = +${CB_SNAP_PENALTY})</span></div>`:""}</div>`:"";
   return`<div class="fade" style="padding-top:14px">
     <button class="btn" id="cb-back" style="background:var(--ca2);color:var(--mu);border:1px solid var(--bd);width:auto;padding:8px 16px;font-size:13px;margin-bottom:12px">← Leave</button>
     ${CB_hdr()}
@@ -3070,7 +3156,7 @@ function CB_scrReveal(){
   const ranked=[...gs.players].sort((a,b)=>(totals[a.id]??99)-(totals[b.id]??99));
   const rows=ranked.map((p,i)=>{
     const cards=p.hand.map(c=>`<div class="cb-card" style="width:32px;height:44px;font-size:14px">${c.rank}</div>`).join("");
-    return`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;${i<ranked.length-1?"border-bottom:1px solid var(--bd)":""}"><span style="width:24px;text-align:center;font-size:16px">${["🥇","🥈","🥉"][i]||(i+1)+"."}</span><span style="font-size:20px">${p.av}</span><div style="flex:1"><div style="font-weight:800;font-size:14px;color:${p.id===myId?"var(--cy)":"var(--te)"}">${p.name}${p.id===gs.caboBy?" 🔔":""}</div><div class="cb-cards" style="margin-top:4px">${cards}</div></div><span class="hf" style="font-size:22px;color:${i===0?CB_GR:"var(--te)"}">${totals[p.id]}</span></div>`;
+    return`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;${i<ranked.length-1?"border-bottom:1px solid var(--bd)":""}"><span style="width:24px;text-align:center;font-size:16px">${["🥇","🥈","🥉"][i]||(i+1)+"."}</span><span style="font-size:20px">${p.av}</span><div style="flex:1"><div style="font-weight:800;font-size:14px;color:${p.id===myId?"var(--cy)":"var(--te)"}">${p.name}${p.id===gs.caboBy?" 🔔":""}${p.penalty>0?` <span style="color:var(--pk);font-size:11px;font-weight:800">+${p.penalty} penalty</span>`:""}</div><div class="cb-cards" style="margin-top:4px">${cards}</div></div><span class="hf" style="font-size:22px;color:${i===0?CB_GR:"var(--te)"}">${totals[p.id]}</span></div>`;
   }).join("");
   return`<div class="fade" style="padding-top:20px">
     <div style="text-align:center;margin-bottom:20px">
@@ -3097,8 +3183,9 @@ function renderCabo(){
   if((gs?.phase||"")!=="reveal")zzCelebrationClear();
   const app=document.getElementById("app");if(!app)return;
   const p=gs?.phase||"";
-  if(p==="peek"&&CB_lastPhase!=="peek"){CB_seen={};CB_drawn=null;CB_pw=null;}
-  if(p==="turn"&&gs.turn!==myId){CB_drawn=null;CB_pw=null;}
+  if(p==="peek"&&CB_lastPhase!=="peek"){CB_seen={};CB_glimpse={};CB_drawn=null;CB_pw=null;CB_committing=false;}
+  if(p==="turn"&&gs.turn!==myId){CB_drawn=null;CB_pw=null;CB_committing=false;}   // my move landed / not my turn
+  if(p==="reveal"){CB_drawn=null;CB_pw=null;CB_committing=false;}
   CB_lastPhase=p;
   try{
     if(!gs||!roomCode)     app.innerHTML=CB_scrSetup();
@@ -3112,7 +3199,7 @@ function renderCabo(){
 
 function bindCabo(){
   const $=id=>document.getElementById(id);const on=(id,fn)=>{const el=$(id);if(el)el.onclick=fn;};
-  on("cb-back",()=>{currentGame=null;gs=null;roomCode="";CB_seen={};CB_drawn=null;CB_pw=null;CB_lastPhase=null;if(stateRefListener&&stateCallback)stateRefListener.off("value",stateCallback);if(statePoller)clearInterval(statePoller);if(actTimer)clearInterval(actTimer);clearInterval(displayTimer);render();});
+  on("cb-back",()=>{currentGame=null;gs=null;roomCode="";CB_seen={};CB_glimpse={};CB_drawn=null;CB_pw=null;CB_committing=false;CB_lastPhase=null;if(stateRefListener&&stateCallback)stateRefListener.off("value",stateCallback);if(statePoller)clearInterval(statePoller);if(actTimer)clearInterval(actTimer);clearInterval(displayTimer);render();});
   on("cb-cbtn",async()=>{myName=$("cb-ni")?.value.trim();if(!myName){toast("Enter your name!","err");return;}$("cb-cbtn").disabled=true;$("cb-cbtn").textContent="Creating…";await CB_createRoom();});
   on("cb-jbtn",async()=>{myName=$("cb-ni")?.value.trim();const c=$("cb-ji")?.value.toUpperCase().trim();if(!myName){toast("Enter your name!","err");return;}if(!c||c.length!==4){toast("Need a 4-letter code","err");return;}$("cb-jbtn").disabled=true;$("cb-jbtn").textContent="Joining…";document.getElementById("app").innerHTML=`<div style="text-align:center;padding:80px 20px;color:var(--mu)"><div style="font-size:32px;margin-bottom:12px">🔗</div><div style="font-weight:800;font-size:16px">Joining ${c}…</div></div>`;await CB_joinRoom(c);});
   const ni=$("cb-ni");if(ni){ni.onkeydown=e=>{if(e.key==="Enter")$("cb-cbtn")?.click();};setTimeout(()=>ni.focus(),60);}
@@ -3123,9 +3210,13 @@ function bindCabo(){
   on("cb-cabo",()=>CB_callCabo());
   on("cb-swapin",()=>CB_beginSwapIn());
   on("cb-discard",()=>CB_discardDrawn());
-  on("cb-donepeek",()=>CB_endTurn());
+  on("cb-donepeek",()=>{ if(CB_drawn) CB_commitTurn({kind:"discard",drawnCid:CB_drawn.card.cid}); });
+  document.querySelectorAll(".cb-diffopt[data-diff]").forEach(el=>{el.onclick=()=>CB_setDifficulty(el.getAttribute("data-diff"));});
   document.querySelectorAll(".cb-card.cb-click[data-owner]").forEach(el=>{
     el.onclick=()=>CB_target(el.getAttribute("data-owner"),parseInt(el.getAttribute("data-slot")));
+  });
+  document.querySelectorAll(".cb-card.cb-snap[data-snap]").forEach(el=>{
+    el.onclick=()=>CB_snap(parseInt(el.getAttribute("data-snap")));
   });
 }
 
