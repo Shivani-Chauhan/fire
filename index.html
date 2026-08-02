@@ -3335,7 +3335,7 @@ function EK_cardHTML(type,{playable=false}={}){const d=EK_DEFS[type];
     <div class="ekcnr">${d.emoji}</div><div class="ekart">${EK_catArt(d.cat)}</div>
     <div class="eknmt">${d.name}</div><div class="ekds">${d.desc||'Play a matching pair to steal'}</div></div>`;}
 
-let EK_lastPeek=-1, EK_sel=null;
+let EK_lastPeek=-1, EK_sel=null, EK_lastDrew=null, EK_drewTO=null;
 const EK_stRef=()=>db.ref(`${EK_ROOT}/${roomCode}/state`);
 const EK_acRef=()=>db.ref(`${EK_ROOT}/${roomCode}/actions`);
 const EK_write=()=>EK_stRef().set(gs);
@@ -3428,6 +3428,7 @@ function EK_draw(pid){
   const p=EK_p(pid);
   if(!gs.deck.length)gs.deck=shuffle(gs.discard.splice(0));
   const card=gs.deck.pop();
+  gs.drew={pid,type:card.type,n:(gs.drew?gs.drew.n:0)+1};   // so the drawer sees exactly what came up
   if(card.type==='kitten'){
     if(EK_has(p,'defuse')){EK_disc(EK_takeOne(p,'defuse'));gs.need={kind:'insert',who:pid,card};gs.msg=`${p.name} drew a kitten & DEFUSED it 🛡️`;}
     else{p.alive=false;EK_disc(card);gs.msg=`💥 ${p.name} exploded and is out!`;
@@ -3464,14 +3465,14 @@ async function EK_processActions(){
 async function EK_send(action){if(isHost){if(EK_apply(myId,action)){await EK_write();render();}}else{await EK_acRef().push({pid:myId,...action,_ts:ms()});}}
 
 async function EK_createRoom(){
-  roomCode=rc();isHost=true;EK_lastPeek=-1;EK_sel=null;
+  roomCode=rc();isHost=true;EK_lastPeek=-1;EK_sel=null;EK_lastDrew=null;
   gs={phase:"lobby",players:[{id:myId,name:myName,av:myAv,hand:[],alive:true}],deck:[],discard:[],turn:null,turnsLeft:1,pending:null,need:null,peek:null,winner:null,msg:null};
   await EK_stRef().set(gs);
   actTimer=setInterval(EK_processActions,350);
   listenToState(roomCode,EK_ROOT,EK_clean);render();
 }
 async function EK_joinRoom(code){
-  roomCode=code;isHost=false;EK_lastPeek=-1;EK_sel=null;
+  roomCode=code;isHost=false;EK_lastPeek=-1;EK_sel=null;EK_lastDrew=null;
   const snap=await db.ref(`${EK_ROOT}/${code}/state`).once("value");
   if(!snap.exists()){toast("Room not found!","err");roomCode="";render();return;}
   const data=EK_clean(snap.val());
@@ -3483,7 +3484,7 @@ async function EK_rematch(){
   if(!isHost)return;
   gs.players.forEach(p=>{p.hand=[];p.alive=true;});
   gs.phase="lobby";gs.deck=[];gs.discard=[];gs.pending=null;gs.need=null;gs.peek=null;gs.winner=null;gs.msg=null;
-  EK_lastPeek=-1;await EK_write();render();
+  EK_lastPeek=-1;EK_lastDrew=null;gs.drew=null;await EK_write();render();
 }
 
 // ── client actions ──
@@ -3518,6 +3519,19 @@ function EK_showFuture(){
     <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">${top.length?top.map(c=>EK_cardHTML(c.type)).join(''):'<div style="color:var(--mu)">Pile is empty!</div>'}</div>
     <button class="btn ekok" style="background:${EK_C};color:#fff;margin-top:14px">Got it 😼</button>`);
   document.querySelector('.ekok').onclick=()=>EK_closeModal();
+}
+// Clearly reveal the card the player just drew.
+function EK_showDrew(type){
+  const d=EK_DEFS[type], kit=type==='kitten';
+  const defused=kit&&EK_has(EK_p(myId),'defuse');
+  EK_modal(`<div class="hf" style="font-size:20px;color:${kit?'#ff6b6b':EK_C}">${kit?'💥 You drew an EXPLODING KITTEN!':'You drew…'}</div>
+    <div style="display:flex;justify-content:center;margin:14px 0;transform:scale(1.15)">${EK_cardHTML(type)}</div>
+    <div style="font-weight:900;color:var(--te);font-size:18px">${d.emoji} ${d.name}</div>
+    ${kit?`<div style="color:var(--mu);font-size:12px;margin-top:6px">${defused?'You have a Defuse 🛡️ — tuck it back in!':'No Defuse… 🙀 you\'re out!'}</div>`:''}
+    <button class="btn ekok" style="background:${kit?'#ff6b6b':EK_C};color:#fff;margin-top:16px">${kit?(defused?'Defuse it! 🛡️':'Oh no 😿'):'Got it 😺'}</button>`);
+  document.querySelector('.ekok').onclick=()=>{clearTimeout(EK_drewTO);EK_closeModal();};
+  clearTimeout(EK_drewTO);
+  if(!kit) EK_drewTO=setTimeout(()=>{const o=document.getElementById('ek-ov');if(o&&o.style.display!=='none'&&/You drew/.test(o.textContent))EK_closeModal();},2800);
 }
 let EK_ov;
 function EK_modal(html){if(!EK_ov){EK_ov=document.createElement('div');EK_ov.id='ek-ov';EK_ov.style.cssText='position:fixed;inset:0;background:rgba(8,11,20,.7);display:flex;align-items:center;justify-content:center;padding:16px;z-index:9000';document.body.appendChild(EK_ov);}EK_ov.innerHTML=`<div class="card" style="max-width:420px;width:100%;text-align:center">${html}</div>`;EK_ov.style.display='flex';}
@@ -3630,6 +3644,7 @@ function renderEK(){
     else if(p==="play")  { app.innerHTML=EK_scrGame(); if(gs.pending)EK_startNopeTimer(); }
     else if(p==="over")    app.innerHTML=EK_scrOver();
     bindEK();
+    if(gs&&gs.drew&&gs.drew.pid===myId&&gs.drew.n!==EK_lastDrew){EK_lastDrew=gs.drew.n;EK_showDrew(gs.drew.type);}
     if(gs&&gs.peek&&gs.peek.pid===myId&&gs.peek.n!==EK_lastPeek){EK_lastPeek=gs.peek.n;EK_showFuture();}
   }catch(e){console.error("ek render err",e);}
 }

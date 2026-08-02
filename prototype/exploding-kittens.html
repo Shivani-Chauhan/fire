@@ -520,11 +520,26 @@
       }
     } else {
       actor.hand.push(card); sortHand(actor);
-      if(actor.isHuman) logMsg(`You drew ${DEFS[card.type].name} ${DEFS[card.type].emoji}.`);
+      if(actor.isHuman){ logMsg(`You drew ${DEFS[card.type].name} ${DEFS[card.type].emoji}.`); render(); await revealDraw(card); }
       else logMsg(`${actor.name} drew a card.`);
     }
     S.busy=false;
     finishObligation();
+  }
+
+  // Clearly show the human the card they just drew.
+  function revealDraw(card){
+    const d = DEFS[card.type];
+    return new Promise(res=>{
+      modal(`<h2>You drew…</h2>
+        <div class="modal-row" style="margin-bottom:6px">${cardHTML(card.type,{big:true})}</div>
+        <div style="font-weight:800;font-size:17px">${d.emoji} ${d.name}</div>
+        <p style="margin-top:4px;margin-bottom:12px">${d.desc||'Play a matching pair to steal a card'}</p>
+        <div class="modal-btns"><button class="btn" id="drewok">Got it 😺</button></div>`);
+      let done=false; const fin=()=>{ if(done)return; done=true; clearTimeout(to); closeModal(); res(); };
+      overlay.querySelector('#drewok').onclick=fin;
+      const to=setTimeout(fin,2600);
+    });
   }
 
   async function placeKitten(actor, card){
