@@ -66,6 +66,24 @@
 
   .turnline{text-align:center;font-weight:800;font-size:15px;min-height:22px}
   .turnline b{color:var(--pink)}
+  .turnbanner{text-align:center;font-weight:800;font-size:16px;padding:11px 16px;border-radius:14px;margin:2px 0 6px}
+  .turnbanner.mine{background:linear-gradient(135deg,#c4f5e6,#d9eaff);color:#237a5c;box-shadow:0 8px 18px -10px rgba(80,200,150,.6)}
+  .turnbanner.theirs{background:linear-gradient(135deg,#ffe0ef,#e7e0ff);color:#a0568a;box-shadow:0 8px 18px -10px rgba(180,120,200,.5);animation:bannerbob 1.1s ease-in-out infinite}
+  .turnbanner .th-av{font-size:22px;vertical-align:-4px;margin-right:2px}
+  @keyframes bannerbob{0%,100%{transform:scale(1)}50%{transform:scale(1.025)}}
+  .thinkdots{display:inline-block;animation:think 1.2s infinite;font-size:20px}
+  @keyframes think{0%,100%{opacity:.25}50%{opacity:1}}
+  .opp.active{animation:oppbob 1s ease-in-out infinite}
+  @keyframes oppbob{0%,100%{transform:translateY(-3px)}50%{transform:translateY(-9px)}}
+  .opp .thinking{position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--sun);color:#4a3b57;
+    font-size:9px;font-weight:900;padding:2px 9px;border-radius:11px;white-space:nowrap;box-shadow:0 3px 8px -2px rgba(0,0,0,.35)}
+  .drawpop{position:fixed;left:50%;top:34%;z-index:60;pointer-events:none;text-align:center;
+    background:var(--card);border-radius:20px;padding:16px 24px;box-shadow:0 24px 56px -18px rgba(80,40,110,.7);animation:drawpop 1.4s ease both}
+  .drawpop .db{width:56px;height:80px;border-radius:11px;margin:0 auto 9px;background:linear-gradient(160deg,#ffb3d1,#c9a7ff);
+    border:3px solid #fff;display:flex;align-items:center;justify-content:center;font-size:26px;box-shadow:0 8px 18px -8px rgba(120,80,160,.6)}
+  .drawpop .dt{font-weight:800;font-size:15px;color:var(--ink)}
+  @keyframes drawpop{0%{opacity:0;transform:translate(-50%,10px) scale(.7)}14%{opacity:1;transform:translate(-50%,0) scale(1.06)}
+    80%{opacity:1;transform:translate(-50%,0) scale(1)}100%{opacity:0;transform:translate(-50%,-22px) scale(.95)}}
 
   /* log */
   .log{background:rgba(255,255,255,.6);border-radius:14px;padding:8px 12px;max-height:92px;overflow-y:auto;
@@ -284,8 +302,10 @@
   // ─────────────────────────────────────────────────────────────
   function render(){
     if(!S){ return; }
+    const active = p => S.turn===p.id && !S.over && p.alive;
     const opps = S.players.slice(1).map(p=>`
-      <div class="opp ${S.turn===p.id&&!S.over?'active':''} ${p.alive?'':'dead'}">
+      <div class="opp ${active(p)?'active':''} ${p.alive?'':'dead'}">
+        ${active(p)?'<div class="thinking">🤔 thinking…</div>':''}
         ${p.alive?'':'<div class="badge">💀</div>'}
         <div class="who"><span style="font-size:18px">${p.av}</span> ${p.name}</div>
         <div class="backs">${p.alive? p.hand.slice(0,8).map(()=>'<div class="mini"></div>').join(''):'<span style="font-size:22px">🙀</span>'}</div>
@@ -294,7 +314,9 @@
 
     const top = S.discard[S.discard.length-1];
     const turnP = S.players[S.turn];
-    const turnTxt = S.over ? '' : (turnP.isHuman ? `<b>Your</b> turn — play a card or draw` : `<b>${turnP.name}</b> is thinking…`);
+    const turnBanner = S.over ? '' : (turnP.isHuman
+      ? `<div class="turnbanner mine">😺 <b>Your turn!</b> Play a card or draw 🐾</div>`
+      : `<div class="turnbanner theirs"><span class="th-av">${turnP.av}</span><b>${turnP.name}</b>'s turn — thinking<span class="thinkdots">…</span></div>`);
 
     app.innerHTML = `
       <header>
@@ -324,7 +346,7 @@
         </div>
       </div>
 
-      <div class="turnline">${turnTxt}</div>
+      ${turnBanner}
       <div class="log" id="log">${S.log.map(l=>`<div>${l}</div>`).join('')}</div>
 
       <div class="handwrap">
@@ -521,10 +543,18 @@
     } else {
       actor.hand.push(card); sortHand(actor);
       if(actor.isHuman){ logMsg(`You drew ${DEFS[card.type].name} ${DEFS[card.type].emoji}.`); render(); await revealDraw(card); }
-      else logMsg(`${actor.name} drew a card.`);
+      else { logMsg(`${actor.name} drew a card.`); render(); drawPop(actor.name, actor.av); await sleep(1200); }
     }
     S.busy=false;
     finishObligation();
+  }
+
+  // A quick, clearly-visible pop when a bot draws a card.
+  function drawPop(name, av){
+    const el=document.createElement('div'); el.className='drawpop';
+    el.innerHTML=`<div class="db">🐾</div><div class="dt">${av||'🐱'} ${name} drew a card</div>`;
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(),1400);
   }
 
   // Clearly show the human the card they just drew.
@@ -664,7 +694,7 @@
   }
   async function botTurn(bot){
     if(S.over || !bot.alive) return;
-    S.busy=true; render(); await sleep(700);
+    S.busy=true; render(); await sleep(1500);   // let the bot "think" for a beat
 
     // peek with See the Future sometimes
     if(has(bot,'future') && !bot.peek && Math.random()<0.55){
