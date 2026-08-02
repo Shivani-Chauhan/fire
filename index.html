@@ -201,6 +201,36 @@ body{background:var(--bg);color:var(--te);font-family:'Nunito',sans-serif;min-he
 .lbl{font-size:11px;color:var(--mu);letter-spacing:2px;text-transform:uppercase;font-weight:900;margin-bottom:8px;display:block}
 .row{display:flex;gap:10px}
 .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+/* ── HOME TILE GRID (neon arcade) ─────────────────────── */
+.hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+.gtile{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;
+  text-decoration:none;color:inherit;cursor:pointer;overflow:hidden;
+  padding:20px 12px 16px;border-radius:20px;
+  background:linear-gradient(160deg,var(--ca2),var(--ca));
+  border:1.5px solid color-mix(in srgb,var(--c) 42%,transparent);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05);
+  transition:transform .18s cubic-bezier(.2,.85,.3,1.25),box-shadow .18s,border-color .18s}
+.gtile::before{content:"";position:absolute;top:-40%;left:50%;transform:translateX(-50%);
+  width:120%;height:70%;pointer-events:none;opacity:.5;transition:opacity .18s;
+  background:radial-gradient(circle at 50% 0,color-mix(in srgb,var(--c) 26%,transparent),transparent 65%)}
+.gtile:hover{transform:translateY(-6px) scale(1.02);border-color:var(--c);
+  box-shadow:0 14px 32px -10px color-mix(in srgb,var(--c) 60%,transparent),
+             0 0 24px -4px color-mix(in srgb,var(--c) 50%,transparent),
+             inset 0 1px 0 rgba(255,255,255,.08)}
+.gtile:hover::before{opacity:1}
+.gtile:active{transform:translateY(-2px) scale(.99)}
+.gtile .ico{position:relative;width:64px;height:64px;display:flex;align-items:center;justify-content:center;
+  font-size:34px;line-height:1;margin-bottom:10px;border-radius:50%;
+  background:radial-gradient(circle at 50% 38%,color-mix(in srgb,var(--c) 24%,transparent),transparent 72%);
+  filter:drop-shadow(0 4px 10px color-mix(in srgb,var(--c) 55%,transparent))}
+.gtile .nm{position:relative;font-family:'Nunito',sans-serif;font-weight:900;font-size:15px;
+  letter-spacing:.2px;line-height:1.15;color:var(--c);
+  text-shadow:0 0 16px color-mix(in srgb,var(--c) 45%,transparent);
+  word-break:normal;overflow-wrap:normal;white-space:normal}
+.gtile .bd{position:relative;margin-top:8px;font-size:9.5px;font-weight:900;letter-spacing:1px;text-transform:uppercase;
+  padding:3px 9px;border-radius:20px;color:var(--c);
+  background:color-mix(in srgb,var(--c) 16%,transparent)}
+.gtile .mt{position:relative;margin-top:9px;font-size:11.5px;font-weight:900;color:var(--mu)}
 @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes pop{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
@@ -3708,139 +3738,34 @@ function bindEK(){
 // ═══════════════════════════════════════════════════════
 // HOME SCREEN
 // ═══════════════════════════════════════════════════════
-function scrHome(){return`
-<div class="fade" style="padding-top:48px">
-  <div style="text-align:center;margin-bottom:48px">
+function scrHome(){
+  const G=[
+    {t:"BLITZ",             c:"#FFE600", i:"⚡", b:"Word Speed",  m:"👥 2–8",        go:"currentGame='blitz';render();"},
+    {t:"PSYCH",             c:"#A855F7", i:"🧠", b:"Fool Friends", m:"👥 3–8",        go:"currentGame='psych';render();"},
+    {t:"BLUFF",             c:"#FF3D71", i:"🃏", b:"Card Game",   m:"👥 2–8",        go:"currentGame='bluff';render();"},
+    {t:"CABO",              c:"#00E096", i:"🎴", b:"Memory Cards", m:"👥 2–8",        go:"currentGame='cabo';render();"},
+    {t:"EXPLODING KITTENS", c:"#FF6F91", i:"🙀", b:"Solo & Rooms", m:"👤 Solo · 👥 2–5", go:"currentGame='ek';render();"},
+    {t:"PICTIONARY",        c:"#06B6D4", i:"🎨", b:"Draw & Guess", m:"👥 2–8",        go:"currentGame='draw';render();"},
+    {t:"TYPE",              c:"#e2b714", i:"⌨️", b:"Solo & Race", m:"👤 Solo · 👥 2–8", go:"currentGame='type';TYPE_view='menu';render();"},
+    {t:"BASKETBALL",        c:"#E8622C", i:"🏀", b:"Solo Arcade", m:"👤 Solo",       href:"hoops/"},
+    {t:"SKYSCRAPERS",       c:"#7EC8FF", i:"🏗️", b:"Solo Arcade", m:"👤 Solo",       href:"skyscrapers/"},
+  ];
+  const tile=g=>{
+    const long=g.t.length>9?" long":"";
+    const inner=`<div class="ico">${g.i}</div><div class="nm">${g.t}</div><div class="bd">${g.b}</div><div class="mt">${g.m}</div>`;
+    return g.href
+      ? `<a class="gtile${long}" href="${g.href}" style="--c:${g.c}">${inner}</a>`
+      : `<div class="gtile${long}" onclick="${g.go}" style="--c:${g.c}">${inner}</div>`;
+  };
+  return `
+<div class="fade" style="padding-top:40px">
+  <div style="text-align:center;margin-bottom:34px">
     <div class="hf" style="font-size:42px;color:var(--te);letter-spacing:2px;line-height:1">ZIPZAP</div>
     <div class="hf" style="font-size:42px;color:var(--y);letter-spacing:2px;line-height:1;text-shadow:0 0 40px #FFE60044">GAMES</div>
     <div style="color:var(--mu);font-size:14px;margin-top:10px">Pick a game to play with friends</div>
   </div>
 
-  <!-- BLITZ card -->
-  <div onclick="currentGame='blitz';render();" style="background:linear-gradient(135deg,#1a1600,#0F1525);border:2px solid rgba(255,230,0,.3);border-radius:20px;padding:24px;margin-bottom:16px;cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor='var(--y)'" onmouseout="this.style.borderColor='rgba(255,230,0,.3)'">
-    <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
-      <div class="hf" style="font-size:36px;color:var(--y);text-shadow:0 0 30px #FFE60055;min-width:80px">BLITZ</div>
-      <div style="background:var(--y);color:#000;font-size:11px;font-weight:900;padding:3px 10px;border-radius:20px;letter-spacing:1px">WORD SPEED</div>
-    </div>
-    <div style="color:var(--te);font-size:14px;font-weight:700;line-height:1.6">Name something in the category starting with the letter — faster than everyone else. First correct answer wins. Others can challenge.</div>
-    <div style="display:flex;gap:12px;margin-top:14px">
-      <span style="color:var(--mu);font-size:12px">👥 2–8 players</span>
-      <span style="color:var(--mu);font-size:12px">⚡ Fast-paced</span>
-      <span style="color:var(--mu);font-size:12px">🔤 Word game</span>
-    </div>
-  </div>
-
-  <!-- PSYCH card -->
-  <div onclick="currentGame='psych';render();" style="background:linear-gradient(135deg,#120a1a,#0F1525);border:2px solid rgba(168,85,247,.3);border-radius:20px;padding:24px;cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor='var(--pu)'" onmouseout="this.style.borderColor='rgba(168,85,247,.3)'">
-    <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
-      <div class="hf" style="font-size:36px;color:var(--pu);text-shadow:0 0 30px #A855F755;min-width:80px">PSYCH</div>
-      <div style="background:var(--pu);color:#fff;font-size:11px;font-weight:900;padding:3px 10px;border-radius:20px;letter-spacing:1px">FOOL YOUR FRIENDS</div>
-    </div>
-    <div style="color:var(--te);font-size:14px;font-weight:700;line-height:1.6">A question about someone in your group appears. Everyone writes an answer. Vote for who's telling the truth — fool your friends to score big.</div>
-    <div style="display:flex;gap:12px;margin-top:14px">
-      <span style="color:var(--mu);font-size:12px">👥 3–8 players</span>
-      <span style="color:var(--mu);font-size:12px">🧠 Social deduction</span>
-      <span style="color:var(--mu);font-size:12px">🎭 Fool your friends</span>
-    </div>
-  </div>
-
-  <!-- BLUFF card -->
-  <div onclick="currentGame='bluff';render();" style="background:linear-gradient(135deg,#1a0410,#0F1525);border:2px solid rgba(255,61,113,.3);border-radius:20px;padding:24px;margin-top:16px;cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor='var(--pk)'" onmouseout="this.style.borderColor='rgba(255,61,113,.3)'">
-    <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
-      <div class="hf" style="font-size:36px;color:var(--pk);text-shadow:0 0 30px rgba(255,61,113,.4);min-width:80px">BLUFF</div>
-      <div style="background:var(--pk);color:#fff;font-size:11px;font-weight:900;padding:3px 10px;border-radius:20px;letter-spacing:1px">CARD GAME</div>
-    </div>
-    <div style="color:var(--te);font-size:14px;font-weight:700;line-height:1.6">The classic card game of lies. Dump your cards face-down claiming a rank — bluff when you don't have it. Get caught and you grab the whole pile. First to empty their hand wins.</div>
-    <div style="display:flex;gap:12px;margin-top:14px">
-      <span style="color:var(--mu);font-size:12px">👥 2–8 players</span>
-      <span style="color:var(--mu);font-size:12px">🃏 Cards</span>
-      <span style="color:var(--mu);font-size:12px">😈 Bluffing</span>
-    </div>
-  </div>
-
-  <!-- CABO card -->
-  <div onclick="currentGame='cabo';render();" style="background:linear-gradient(135deg,#04160f,#0F1525);border:2px solid rgba(0,224,150,.3);border-radius:20px;padding:24px;margin-top:16px;cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor='var(--gr)'" onmouseout="this.style.borderColor='rgba(0,224,150,.3)'">
-    <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
-      <div class="hf" style="font-size:36px;color:var(--gr);text-shadow:0 0 30px rgba(0,224,150,.4);min-width:80px">CABO</div>
-      <div style="background:var(--gr);color:#000;font-size:11px;font-weight:900;padding:3px 10px;border-radius:20px;letter-spacing:1px">MEMORY CARDS</div>
-    </div>
-    <div style="color:var(--te);font-size:14px;font-weight:700;line-height:1.6">Start with four hidden cards and peek at two. Draw, swap and use card powers to shrink your total — and remember what everyone's holding. Call "Cabo" when you think you're lowest. Smallest total wins.</div>
-    <div style="display:flex;gap:12px;margin-top:14px">
-      <span style="color:var(--mu);font-size:12px">👥 2–8 players</span>
-      <span style="color:var(--mu);font-size:12px">🃏 Cards</span>
-      <span style="color:var(--mu);font-size:12px">🧠 Memory</span>
-    </div>
-  </div>
-
-  <!-- DRAW card -->
-  <div onclick="currentGame='draw';render();" style="background:linear-gradient(135deg,#001a1f,#0F1525);border:2px solid rgba(6,182,212,.3);border-radius:20px;padding:24px;margin-top:16px;cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor='#06B6D4'" onmouseout="this.style.borderColor='rgba(6,182,212,.3)'">
-    <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
-      <div class="hf" style="font-size:26px;color:#06B6D4;text-shadow:0 0 30px rgba(6,182,212,.5)">PICTIONARY</div>
-      <div style="background:#06B6D4;color:#000;font-size:11px;font-weight:900;padding:3px 10px;border-radius:20px;letter-spacing:1px">DRAW &amp; HAVE FUN</div>
-    </div>
-    <div style="color:var(--te);font-size:14px;font-weight:700;line-height:1.6">One player draws, everyone guesses in real time. First correct guess wins. No artistic talent required — bad drawings are funnier anyway.</div>
-    <div style="display:flex;gap:12px;margin-top:14px">
-      <span style="color:var(--mu);font-size:12px">👥 2–8 players</span>
-      <span style="color:var(--mu);font-size:12px">🎨 Drawing</span>
-      <span style="color:var(--mu);font-size:12px">⚡ Real-time</span>
-    </div>
-  </div>
-
-  <!-- TYPE card -->
-  <div onclick="currentGame='type';TYPE_view='menu';render();" style="background:linear-gradient(135deg,#1a1600,#0F1525);border:2px solid rgba(226,183,20,.3);border-radius:20px;padding:24px;margin-top:16px;cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor='#e2b714'" onmouseout="this.style.borderColor='rgba(226,183,20,.3)'">
-    <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
-      <div class="hf" style="font-size:30px;color:#e2b714;text-shadow:0 0 30px rgba(226,183,20,.5);min-width:80px">TYPE</div>
-      <div style="background:#e2b714;color:#000;font-size:11px;font-weight:900;padding:3px 10px;border-radius:20px;letter-spacing:1px">SOLO &amp; RACE</div>
-    </div>
-    <div style="color:var(--te);font-size:14px;font-weight:700;line-height:1.6">A clean typing speed test. Play solo to measure your WPM and accuracy with a live graph — or race friends on the same words and watch everyone's live speed.</div>
-    <div style="display:flex;gap:12px;margin-top:14px">
-      <span style="color:var(--mu);font-size:12px">👤 Solo or 👥 2–8</span>
-      <span style="color:var(--mu);font-size:12px">⌨️ Speed test</span>
-      <span style="color:var(--mu);font-size:12px">🏁 Live race</span>
-    </div>
-  </div>
-
-  <!-- EXPLODING KITTENS card -->
-  <div onclick="currentGame='ek';render();" style="background:linear-gradient(135deg,#2a0d16,#0F1525);border:2px solid rgba(255,111,145,.35);border-radius:20px;padding:24px;margin-top:16px;cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor='#FF6F91'" onmouseout="this.style.borderColor='rgba(255,111,145,.35)'">
-    <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
-      <div class="hf" style="font-size:26px;color:#FF6F91;text-shadow:0 0 30px rgba(255,111,145,.5)">EXPLODING KITTENS</div>
-      <div style="background:#FF6F91;color:#fff;font-size:11px;font-weight:900;padding:3px 10px;border-radius:20px;letter-spacing:1px">SOLO &amp; ROOMS</div>
-    </div>
-    <div style="color:var(--te);font-size:14px;font-weight:700;line-height:1.6">Draw cards… just don't draw a kitten 🙀 Use Skips, Attacks, Favors and Nopes to survive — last cat standing wins. Adorable kitten cards. Play solo vs bots or in a room with friends.</div>
-    <div style="display:flex;gap:12px;margin-top:14px">
-      <span style="color:var(--mu);font-size:12px">👤 Solo or 👥 2–5</span>
-      <span style="color:var(--mu);font-size:12px">🐱 Card game</span>
-      <span style="color:var(--mu);font-size:12px">💥 Chaotic fun</span>
-    </div>
-  </div>
-
-  <!-- BASKETBALL card (standalone page at /hoops/) -->
-  <a href="hoops/" style="display:block;text-decoration:none;color:inherit;background:linear-gradient(135deg,#1f0d04,#0F1525);border:2px solid rgba(232,98,44,.35);border-radius:20px;padding:24px;margin-top:16px;cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor='#E8622C'" onmouseout="this.style.borderColor='rgba(232,98,44,.35)'">
-    <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
-      <div class="hf" style="font-size:30px;color:#E8622C;text-shadow:0 0 30px rgba(232,98,44,.5)">BASKETBALL</div>
-      <div style="background:#E8622C;color:#fff;font-size:11px;font-weight:900;padding:3px 10px;border-radius:20px;letter-spacing:1px">SOLO ARCADE</div>
-    </div>
-    <div style="color:var(--te);font-size:14px;font-weight:700;line-height:1.6">Drag to aim, release to shoot 🏀 — then thread the rim from a brand-new spot every time you score. Chase your best streak, unlock the vibe with 12 ball skins. No sign-up, plays instantly.</div>
-    <div style="display:flex;gap:12px;margin-top:14px">
-      <span style="color:var(--mu);font-size:12px">👤 Solo</span>
-      <span style="color:var(--mu);font-size:12px">🏀 Arcade</span>
-      <span style="color:var(--mu);font-size:12px">⚡ Instant</span>
-    </div>
-  </a>
-
-  <!-- SKYSCRAPERS card (standalone page at /skyscrapers/) -->
-  <a href="skyscrapers/" style="display:block;text-decoration:none;color:inherit;background:linear-gradient(135deg,#0a1330,#0F1525);border:2px solid rgba(126,200,255,.35);border-radius:20px;padding:24px;margin-top:16px;cursor:pointer;transition:border-color .2s" onmouseover="this.style.borderColor='#7EC8FF'" onmouseout="this.style.borderColor='rgba(126,200,255,.35)'">
-    <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px">
-      <div class="hf" style="font-size:26px;color:#7EC8FF;text-shadow:0 0 30px rgba(126,200,255,.5)">SKYSCRAPERS</div>
-      <div style="background:#7EC8FF;color:#0b1026;font-size:11px;font-weight:900;padding:3px 10px;border-radius:20px;letter-spacing:1px">SOLO ARCADE</div>
-    </div>
-    <div style="color:var(--te);font-size:14px;font-weight:700;line-height:1.6">A crane carries each block 🏗️ — tap to drop it and stack the tower sky-high. Nail it dead-centre for a perfect; miss and the block gets trimmed. How high can you build? The classic phone stacker.</div>
-    <div style="display:flex;gap:12px;margin-top:14px">
-      <span style="color:var(--mu);font-size:12px">👤 Solo</span>
-      <span style="color:var(--mu);font-size:12px">🏗️ Stacking</span>
-      <span style="color:var(--mu);font-size:12px">⚡ One-tap</span>
-    </div>
-  </a>
+  <div class="hgrid">${G.map(tile).join("")}</div>
 
   <div style="text-align:center;margin-top:28px;color:var(--mu);font-size:12px">zipzap-games.com · More games coming soon</div>
 </div>`;}
