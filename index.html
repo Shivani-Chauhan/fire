@@ -231,6 +231,14 @@ body{background:var(--bg);color:var(--te);font-family:'Nunito',sans-serif;min-he
   padding:3px 9px;border-radius:20px;color:var(--c);
   background:color-mix(in srgb,var(--c) 16%,transparent)}
 .gtile .mt{position:relative;margin-top:9px;font-size:11.5px;font-weight:900;color:var(--mu)}
+.gtile .desc{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  padding:16px 15px;border-radius:20px;text-align:center;
+  background:linear-gradient(160deg,color-mix(in srgb,var(--c) 20%,var(--ca2)),var(--ca));
+  opacity:0;pointer-events:none;transition:opacity .18s}
+.gtile .desc b{font-family:'Nunito',sans-serif;font-weight:900;font-size:14px;letter-spacing:.2px;color:var(--c);
+  text-shadow:0 0 14px color-mix(in srgb,var(--c) 45%,transparent)}
+.gtile .desc span{font-size:11.5px;font-weight:800;line-height:1.5;color:var(--te)}
+.gtile:hover .desc{opacity:1}
 @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
 @keyframes pop{from{transform:scale(.8);opacity:0}to{transform:scale(1);opacity:1}}
 @keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
@@ -3740,19 +3748,19 @@ function bindEK(){
 // ═══════════════════════════════════════════════════════
 function scrHome(){
   const G=[
-    {t:"BLITZ",             c:"#FFE600", i:"⚡", b:"Word Speed",  m:"👥 2–8",        go:"currentGame='blitz';render();"},
-    {t:"PSYCH",             c:"#A855F7", i:"🧠", b:"Fool Friends", m:"👥 3–8",        go:"currentGame='psych';render();"},
-    {t:"BLUFF",             c:"#FF3D71", i:"🃏", b:"Card Game",   m:"👥 2–8",        go:"currentGame='bluff';render();"},
-    {t:"CABO",              c:"#00E096", i:"🎴", b:"Memory Cards", m:"👥 2–8",        go:"currentGame='cabo';render();"},
-    {t:"EXPLODING KITTENS", c:"#FF6F91", i:"🙀", b:"Solo & Rooms", m:"👤 Solo · 👥 2–5", go:"currentGame='ek';render();"},
-    {t:"PICTIONARY",        c:"#06B6D4", i:"🎨", b:"Draw & Guess", m:"👥 2–8",        go:"currentGame='draw';render();"},
-    {t:"TYPE",              c:"#e2b714", i:"⌨️", b:"Solo & Race", m:"👤 Solo · 👥 2–8", go:"currentGame='type';TYPE_view='menu';render();"},
-    {t:"BASKETBALL",        c:"#E8622C", i:"🏀", b:"Solo Arcade", m:"👤 Solo",       href:"hoops/"},
-    {t:"SKYSCRAPERS",       c:"#7EC8FF", i:"🏗️", b:"Solo Arcade", m:"👤 Solo",       href:"skyscrapers/"},
+    {t:"BLITZ",             c:"#FFE600", i:"⚡", b:"Word Speed",  m:"👥 2–8",        d:"Name something in the category starting with the letter — faster than everyone else. First correct answer wins.", go:"currentGame='blitz';render();"},
+    {t:"PSYCH",             c:"#A855F7", i:"🧠", b:"Fool Friends", m:"👥 3–8",        d:"A question about someone in your group pops up. Everyone writes an answer, then votes for the real one. Fool your friends to score.", go:"currentGame='psych';render();"},
+    {t:"BLUFF",             c:"#FF3D71", i:"🃏", b:"Card Game",   m:"👥 2–8",        d:"Dump cards face-down claiming a rank — bluff when you don't have it. Get caught and you grab the whole pile. Empty your hand to win.", go:"currentGame='bluff';render();"},
+    {t:"CABO",              c:"#00E096", i:"🎴", b:"Memory Cards", m:"👥 2–8",        d:"Peek, draw, swap and use card powers to shrink your total — and remember everyone's cards. Call \"Cabo\" when you're lowest.", go:"currentGame='cabo';render();"},
+    {t:"EXPLODING KITTENS", c:"#FF6F91", i:"🙀", b:"Solo & Rooms", m:"👤 Solo · 👥 2–5", d:"Draw cards… just don't draw a kitten 🙀 Use Skips, Attacks, Favors and Nopes to survive. Last cat standing wins.", go:"currentGame='ek';render();"},
+    {t:"PICTIONARY",        c:"#06B6D4", i:"🎨", b:"Draw & Guess", m:"👥 2–8",        d:"One player draws, everyone guesses in real time. First correct guess wins — bad drawings are funnier anyway.", go:"currentGame='draw';render();"},
+    {t:"TYPE",              c:"#e2b714", i:"⌨️", b:"Solo & Race", m:"👤 Solo · 👥 2–8", d:"A clean typing speed test. Play solo to measure your WPM and accuracy, or race friends on the same words live.", go:"currentGame='type';TYPE_view='menu';render();"},
+    {t:"BASKETBALL",        c:"#E8622C", i:"🏀", b:"Solo Arcade", m:"👤 Solo",       d:"Drag to aim, release to shoot 🏀 Sink it from a brand-new spot every score. Chase your best streak, unlock 12 ball skins.", href:"hoops/"},
+    {t:"SKYSCRAPERS",       c:"#7EC8FF", i:"🏗️", b:"Solo Arcade", m:"👤 Solo",       d:"A crane carries each block 🏗️ Tap to drop it and stack the tower sky-high. Nail it dead-centre for a perfect. How high can you build?", href:"skyscrapers/"},
   ];
   const tile=g=>{
     const long=g.t.length>9?" long":"";
-    const inner=`<div class="ico">${g.i}</div><div class="nm">${g.t}</div><div class="bd">${g.b}</div><div class="mt">${g.m}</div>`;
+    const inner=`<div class="ico">${g.i}</div><div class="nm">${g.t}</div><div class="bd">${g.b}</div><div class="mt">${g.m}</div><div class="desc"><b>${g.t}</b><span>${g.d}</span></div>`;
     return g.href
       ? `<a class="gtile${long}" href="${g.href}" style="--c:${g.c}">${inner}</a>`
       : `<div class="gtile${long}" onclick="${g.go}" style="--c:${g.c}">${inner}</div>`;
