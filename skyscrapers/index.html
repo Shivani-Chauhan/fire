@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Skyscrapers — Free Online Block Stacking Tower Game | ZipZap Games</title>
+<meta name="description" content="Free online skyscraper stacking game. A crane carries each block — tap to drop it and stack the tower as high as you can. Perfect drops keep it wide, misses trim it down. No download, plays instantly.">
+<link rel="canonical" href="https://zipzap-games.com/skyscrapers/">
+<meta name="theme-color" content="#0e1430">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="ZipZap Games">
+<meta property="og:title" content="Skyscrapers — Block Stacking Tower Game">
+<meta property="og:description" content="A crane carries each block. Tap to drop it and build the tallest tower you can. Perfect drops, growing speed — one more floor!">
+<meta property="og:url" content="https://zipzap-games.com/skyscrapers/">
+<meta property="og:image" content="https://zipzap-games.com/skyscrapers/cover.png">
+<meta property="og:locale" content="en_IN">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{
+  "@context":"https://schema.org","@type":"VideoGame","name":"Skyscrapers",
+  "url":"https://zipzap-games.com/skyscrapers/",
+  "description":"A free browser block-stacking tower game. A crane carries each block; tap to drop it, trim the overhang and build the tallest skyscraper you can.",
+  "genre":["Arcade","Casual"],"playMode":"SinglePlayer","applicationCategory":"Game",
+  "gamePlatform":"Web browser","operatingSystem":"Any",
+  "publisher":{"@type":"Organization","name":"ZipZap Games","url":"https://zipzap-games.com/"},
+  "offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}
+}
+</script>
+<style>
+  :root{--ink:#eaf0ff;--mut:#8a94c0;--accent:#ffcf5c}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{min-height:100vh;background:#0b1026;color:var(--ink);
+    font-family:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    display:flex;flex-direction:column;align-items:center;padding:12px;gap:12px}
+  .shell{width:100%;max-width:440px;display:flex;flex-direction:column;gap:12px}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .brand{display:flex;flex-direction:column;gap:1px}
+  .eyebrow{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--mut);font-weight:700;text-decoration:none}
+  h1{font-size:clamp(20px,5vw,26px);font-weight:800;letter-spacing:-.01em;text-transform:uppercase;line-height:1}
+  h1 em{font-style:normal;color:var(--accent)}
+  .scores{display:flex;gap:18px;align-items:flex-end}
+  .stat{display:flex;flex-direction:column;align-items:flex-end;gap:1px}
+  .stat b{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:clamp(20px,5vw,28px);font-weight:700;line-height:1;font-variant-numeric:tabular-nums}
+  .stat span{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--mut)}
+  .stage{position:relative;border-radius:16px;overflow:hidden;box-shadow:0 24px 60px -22px rgba(0,0,0,.8),inset 0 0 0 1px rgba(255,255,255,.06)}
+  canvas{display:block;width:100%;height:auto;aspect-ratio:420/680;touch-action:none;cursor:pointer}
+  .over{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+    background:rgba(8,12,32,.72);backdrop-filter:blur(3px);text-align:center;padding:20px}
+  .over.show{display:flex;animation:fade .3s ease}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .over h2{font-size:30px;font-weight:800}
+  .over .big{font-family:ui-monospace,monospace;font-size:60px;font-weight:700;line-height:1;color:var(--accent)}
+  .over .sub{color:var(--mut);font-size:13px;font-weight:600}
+  .over .again{margin-top:12px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink);
+    border:1px solid rgba(255,255,255,.25);border-radius:9px;padding:10px 18px;font-weight:700}
+  .drop{width:100%;border:none;border-radius:14px;padding:16px;font-family:inherit;font-weight:800;font-size:18px;
+    letter-spacing:.04em;text-transform:uppercase;color:#0b1026;cursor:pointer;
+    background:linear-gradient(180deg,#ffe08a,#ffcf5c);box-shadow:0 8px 0 -1px #c99a2a;transition:transform .08s,box-shadow .08s}
+  .drop:active{transform:translateY(4px);box-shadow:0 4px 0 -1px #c99a2a}
+  .tip{text-align:center;font-size:12px;color:var(--mut);font-weight:600}
+  @media(prefers-reduced-motion:reduce){*{animation-duration:.01ms!important}}
+</style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div class="brand">
+      <a class="eyebrow" href="/">&larr; ZipZap Games</a>
+      <h1>Sky<em>scrapers</em></h1>
+    </div>
+    <div class="scores">
+      <div class="stat"><b id="score">0</b><span>Floors</span></div>
+      <div class="stat"><b id="best">0</b><span>Best</span></div>
+    </div>
+  </header>
+  <div class="stage">
+    <canvas id="game" width="420" height="680"></canvas>
+    <div class="over" id="over">
+      <h2>Timber! 🏗️</h2>
+      <div class="big" id="finalScore">0</div>
+      <div class="sub" id="finalSub">floors built</div>
+      <div class="again">Tap to build again</div>
+    </div>
+  </div>
+  <button class="drop" id="dropBtn">Drop block 🏗️</button>
+  <div class="tip">Tap the tower, hit the button, or press <b>Space</b> to drop</div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  const cv=document.getElementById('game'), ctx=cv.getContext('2d');
+  const W=420, H=680;
+  function sharpen(){ const dpr=Math.min(window.devicePixelRatio||1,3); cv.width=W*dpr; cv.height=H*dpr; ctx.setTransform(dpr,0,0,dpr,0,0); }
+  sharpen(); window.addEventListener('resize',sharpen);
+
+  // ── constants ──────────────────────────────────────────
+  const BLOCK_H=34, INIT_W=156, PERFECT_TOL=4.4, PERFECT_GROW=5;
+  const CRANE_GAP=180;        // world-height the crane holds the block above the tower
+  const DROP_Y=H*0.70;        // screen-Y where the tower's top surface sits
+  const BEAM_Y=44;            // screen-Y of the crane jib
+  const BASE_HUE=203;
+  const clamp=(v,a,b)=>v<a?a:v>b?b:v;
+  const lerp=(a,b,t)=>a+(b-a)*t;
+
+  // ── state ──────────────────────────────────────────────
+  let blocks, cur, phase, fall, fallV, scroll, debris, pops, score, combo, speed, shake, best, flashPerfect;
+  best = +(localStorage.getItem('zz_sky_best')||0);
+  document.getElementById('best').textContent=best;
+
+  const stars=[]; for(let i=0;i<70;i++) stars.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.4+.3,tw:Math.random()*6.28});
+  const skyline=[]; for(let i=0,x=0;x<W;i++){ const w=18+Math.random()*30, h=30+Math.random()*80; skyline.push({x,w,h}); x+=w+2; }
+
+  function reset(){
+    blocks=[{x:(W-INIT_W)/2, w:INIT_W}];
+    score=0; combo=0; speed=2.0; phase='move'; scroll=BLOCK_H; debris=[]; pops=[]; shake=0; flashPerfect=0;
+    document.getElementById('score').textContent=0;
+    document.getElementById('over').classList.remove('show');
+    spawn();
+  }
+  function spawn(){
+    const w=blocks[blocks.length-1].w;
+    const left=Math.random()<.5;
+    cur={x:left?0:W-w, w, dir:left?1:-1};
+    fall=CRANE_GAP; fallV=0; phase='move';
+  }
+  function drop(){
+    if(phase==='move'){ phase='drop'; fallV=300; }
+    else if(phase==='over'){ reset(); }
+  }
+
+  function fallDebris(x,w,hue){
+    return {x, w, y:DROP_Y-BLOCK_H, vy:-1-Math.random()*2, vx:(Math.random()-.5)*2 + (x<W/2?-1.4:1.4), rot:0, rv:(Math.random()-.5)*.25, hue, life:1};
+  }
+
+  function resolve(){
+    const prev=blocks[blocks.length-1];
+    const L=Math.max(cur.x, prev.x), R=Math.min(cur.x+cur.w, prev.x+prev.w);
+    const ov=R-L;
+    const hue=(BASE_HUE + blocks.length*7)%360;
+    if(ov<=0){                              // total miss → game over
+      debris.push(fallDebris(cur.x,cur.w,hue));
+      phase='over'; shake=8; sfx('over');
+      if(score>best){ best=score; localStorage.setItem('zz_sky_best',best); document.getElementById('best').textContent=best; }
+      const ov2=document.getElementById('over');
+      document.getElementById('finalScore').textContent=score;
+      document.getElementById('finalSub').textContent = score+(score===1?' floor built':' floors built')+(score>=best&&score>0?' · new best! 🏆':'');
+      ov2.classList.add('show');
+      return;
+    }
+    const dx=cur.x-prev.x;
+    let nx,nw;
+    if(Math.abs(dx)<=PERFECT_TOL){          // perfect drop
+      nw=Math.min(INIT_W, prev.w+PERFECT_GROW);
+      nx=clamp(prev.x-(nw-prev.w)/2,0,W-nw);
+      combo++; flashPerfect=1; shake=2; sfx('perfect');
+      pops.push({x:nx+nw/2, y:DROP_Y-BLOCK_H, life:1, combo});
+    } else {                                // trim the overhang
+      combo=0; nx=L; nw=ov; shake=1; sfx('drop');
+      if(cur.x<prev.x) debris.push(fallDebris(cur.x, prev.x-cur.x, hue));
+      else debris.push(fallDebris(R, (cur.x+cur.w)-R, hue));
+    }
+    blocks.push({x:nx, w:nw});
+    score++; document.getElementById('score').textContent=score;
+    speed=Math.min(7.2, 2.0+score*0.058);
+    spawn();
+  }
+
+  // ── update ─────────────────────────────────────────────
+  function update(dt){
+    const targetScroll = blocks.length*BLOCK_H;
+    scroll += (targetScroll-scroll)*Math.min(1,dt*7);
+    if(shake>0) shake=Math.max(0,shake-dt*22);
+    if(flashPerfect>0) flashPerfect=Math.max(0,flashPerfect-dt*2.2);
+
+    if(phase==='move'){
+      cur.x += cur.dir*speed*(dt*60);
+      if(cur.x<=0){ cur.x=0; cur.dir=1; } else if(cur.x>=W-cur.w){ cur.x=W-cur.w; cur.dir=-1; }
+    } else if(phase==='drop'){
+      fallV += 2600*dt; fall -= fallV*dt;
+      if(fall<=0){ fall=0; resolve(); }
+    }
+    debris.forEach(d=>{ d.vy += 26*dt; d.y += d.vy; d.x += d.vx; d.rot += d.rv; d.life -= dt*0.5; });
+    debris=debris.filter(d=>d.y<H+80 && d.life>0);
+    pops.forEach(p=>p.life-=dt*1.4); pops=pops.filter(p=>p.life>0);
+  }
+
+  // ── render ─────────────────────────────────────────────
+  function sY(worldY){ return DROP_Y-(worldY-scroll); }
+  function rr(x,y,w,h,r){ r=Math.min(r,w/2,h/2); ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+  function drawBlock(x,top,w,i,glow){
+    const hue=(BASE_HUE+i*7)%360;
+    const g=ctx.createLinearGradient(0,top,0,top+BLOCK_H);
+    g.addColorStop(0,`hsl(${hue} 64% 67%)`); g.addColorStop(1,`hsl(${hue} 58% 51%)`);
+    ctx.fillStyle=g; rr(x,top,w,BLOCK_H,4); ctx.fill();
+    ctx.fillStyle=`hsla(${hue} 78% 82% / .9)`; ctx.fillRect(x+3,top+3,Math.max(0,w-6),2.5);   // highlight
+    ctx.fillStyle='rgba(20,20,40,.10)'; ctx.fillRect(x,top+BLOCK_H-4,w,4);                     // base shade
+    // a couple of "windows"
+    ctx.fillStyle=`hsla(${hue} 40% 30% / .35)`;
+    for(let wx=x+8; wx<x+w-8; wx+=16){ ctx.fillRect(wx,top+10,6,BLOCK_H-18); }
+    if(glow){ ctx.strokeStyle='rgba(255,255,255,.9)'; ctx.lineWidth=2; rr(x,top,w,BLOCK_H,4); ctx.stroke(); }
+  }
+
+  function render(){
+    const t=clamp(score/55,0,1);
+    // sky
+    const g=ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,`rgb(${lerp(120,10,t)|0},${lerp(180,16,t)|0},${lerp(245,46,t)|0})`);
+    g.addColorStop(1,`rgb(${lerp(200,40,t)|0},${lerp(228,36,t)|0},${lerp(255,92,t)|0})`);
+    ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+    // stars (fade in as it gets dark)
+    if(t>0.15){ ctx.fillStyle='#fff'; stars.forEach(s=>{ ctx.globalAlpha=(t-0.15)*(0.5+0.5*Math.sin(s.tw+performance.now()/700)); ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,6.29); ctx.fill(); }); ctx.globalAlpha=1; }
+
+    const sh = shake>0 ? (Math.random()-.5)*shake : 0;
+    ctx.save(); ctx.translate(sh, sh*0.5);
+
+    // distant skyline near the base of the tower
+    const baseScreen=sY(0);
+    if(baseScreen>0 && baseScreen<H+120){
+      ctx.fillStyle=`rgba(${lerp(70,14,t)|0},${lerp(90,20,t)|0},${lerp(130,44,t)|0},.85)`;
+      skyline.forEach(b=>ctx.fillRect(b.x, baseScreen-b.h, b.w, b.h+200));
+    }
+
+    // tower blocks (top-down until off screen)
+    for(let i=blocks.length-1;i>=0;i--){
+      const top=sY((i+1)*BLOCK_H);
+      if(top>H) continue; if(top+BLOCK_H<0) break;
+      drawBlock(blocks[i].x, top, blocks[i].w, i, false);
+    }
+
+    // falling debris
+    debris.forEach(d=>{ ctx.save(); ctx.globalAlpha=Math.max(0,d.life); ctx.translate(d.x+d.w/2,d.y+BLOCK_H/2); ctx.rotate(d.rot);
+      ctx.fillStyle=`hsl(${d.hue} 60% 58%)`; rr(-d.w/2,-BLOCK_H/2,d.w,BLOCK_H,4); ctx.fill(); ctx.restore(); });
+
+    // moving / dropping block + crane
+    if(phase!=='over' || debris.length){
+      if(phase==='move'||phase==='drop'){
+        const bottom=sY(blocks.length*BLOCK_H + fall);
+        const top=bottom-BLOCK_H;
+        const cx=cur.x+cur.w/2;
+        // crane: mast (right), jib (across top), trolley + cable
+        ctx.strokeStyle='#3a4472'; ctx.lineWidth=6; ctx.lineCap='round';
+        ctx.beginPath(); ctx.moveTo(W-9,BEAM_Y); ctx.lineTo(W-9,H); ctx.stroke();          // mast
+        ctx.lineWidth=7; ctx.beginPath(); ctx.moveTo(2,BEAM_Y); ctx.lineTo(W-6,BEAM_Y); ctx.stroke(); // jib
+        ctx.fillStyle='#ffcf5c'; ctx.fillRect(cx-11,BEAM_Y-6,22,12);                         // trolley
+        ctx.fillStyle='#2b3358'; ctx.fillRect(W-16,BEAM_Y-9,10,10);                          // motor
+        if(phase==='move'){ ctx.strokeStyle='#c7cef0'; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(cx,BEAM_Y+6); ctx.lineTo(cx,top); ctx.stroke();
+          ctx.fillStyle='#c7cef0'; ctx.fillRect(cx-4,top-3,8,4); }                            // cable + hook
+        drawBlock(cur.x, top, cur.w, blocks.length, phase==='move');
+      }
+    }
+
+    // perfect pops
+    pops.forEach(p=>{ ctx.save(); ctx.globalAlpha=clamp(p.life,0,1);
+      ctx.fillStyle='#fff'; ctx.font='800 15px ui-sans-serif,system-ui'; ctx.textAlign='center';
+      ctx.fillText(p.combo>1?`PERFECT ×${p.combo}`:'PERFECT!', p.x, p.y-14-(1-p.life)*20);
+      ctx.strokeStyle=`rgba(255,255,255,${p.life*.6})`; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(p.x,p.y,(1-p.life)*40,0,6.29); ctx.stroke(); ctx.restore(); });
+
+    if(flashPerfect>0){ ctx.fillStyle=`rgba(255,255,255,${flashPerfect*0.12})`; ctx.fillRect(0,0,W,H); }
+    ctx.restore();
+  }
+
+  // ── loop ───────────────────────────────────────────────
+  let last=performance.now();
+  function loop(now){ const dt=Math.min((now-last)/1000,1/30); last=now; update(dt); render(); requestAnimationFrame(loop); }
+
+  // ── audio (subtle) ─────────────────────────────────────
+  let AC; function sfx(kind){ try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); const o=AC.createOscillator(),g=AC.createGain(); o.connect(g); g.connect(AC.destination);
+    const f=kind==='perfect'?880:kind==='over'?150:330; o.frequency.value=f; if(kind==='perfect'){o.frequency.exponentialRampToValueAtTime(1320,AC.currentTime+.09);} if(kind==='over'){o.frequency.exponentialRampToValueAtTime(70,AC.currentTime+.3);}
+    g.gain.value=.05; g.gain.exponentialRampToValueAtTime(.0001,AC.currentTime+(kind==='over'?.32:.13)); o.start(); o.stop(AC.currentTime+(kind==='over'?.33:.14)); }catch(e){} }
+
+  // ── input ──────────────────────────────────────────────
+  cv.addEventListener('pointerdown', e=>{ e.preventDefault(); drop(); });
+  document.getElementById('dropBtn').addEventListener('click', drop);
+  document.getElementById('over').addEventListener('pointerdown', e=>{ e.preventDefault(); drop(); });
+  window.addEventListener('keydown', e=>{ if(e.key===' '||e.key==='Enter'||e.key==='ArrowDown'){ e.preventDefault(); drop(); } }, {passive:false});
+
+  reset();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
