@@ -166,6 +166,19 @@
         "numberOfPlayers": { "@type": "QuantitativeValue", "minValue": 1, "maxValue": 1 },
         "gamePlatform": "Web Browser"
       }
+    },
+    {
+      "@type": "ListItem",
+      "position": 10,
+      "item": {
+        "@type": "Game",
+        "name": "Sumo Smash",
+        "description": "A frantic one-on-one tap-battle sumo game. Mash the button as fast as you can to shove your rival out of the ring — the faster tapper pushes the other across the line. Play solo against a bot on three difficulty levels, or create a room and wrestle a friend online. Best of three wins.",
+        "url": "https://zipzap-games.com",
+        "genre": "Arcade Game",
+        "numberOfPlayers": { "@type": "QuantitativeValue", "minValue": 1, "maxValue": 2 },
+        "gamePlatform": "Web Browser"
+      }
     }
   ]
 }
@@ -413,6 +426,41 @@ body.typing-mode #app{max-width:960px}
 .ek-drawpop .db{width:48px;height:68px;border-radius:10px;margin:0 auto 8px;background:linear-gradient(160deg,#ffb3d1,#c9a7ff);border:2.5px solid #fff;display:flex;align-items:center;justify-content:center;font-size:22px}
 .ek-drawpop .dt{font-weight:800;font-size:14px;color:var(--te)}
 @keyframes ekdrawpop{0%{opacity:0;transform:translate(-50%,10px) scale(.7)}13%{opacity:1;transform:translate(-50%,0) scale(1.06)}82%{opacity:1;transform:translate(-50%,0) scale(1)}100%{opacity:0;transform:translate(-50%,-20px) scale(.95)}}
+/* ── SUMO SMASH ──────────────────────────────────────── */
+#sm-arena{position:relative;height:270px;border-radius:22px;overflow:hidden;user-select:none;touch-action:manipulation;cursor:pointer;
+  background:radial-gradient(120% 90% at 50% 8%,#2a2138,#14101f 70%),linear-gradient(#14101f,#0d0a16)}
+.sm-ring{position:absolute;left:50%;bottom:20px;transform:translateX(-50%);width:86%;height:150px;border-radius:50%;
+  background:radial-gradient(60% 70% at 50% 40%,#E8C79A,#D8A96E 72%,#B98A50);box-shadow:0 10px 30px rgba(0,0,0,.45),inset 0 6px 18px rgba(255,255,255,.18)}
+.sm-ring::after{content:"";position:absolute;inset:14px;border-radius:50%;border:3px dashed rgba(120,80,40,.45)}
+.sm-goal{position:absolute;top:0;bottom:0;width:15%;pointer-events:none}
+.sm-goal.L{left:0;background:linear-gradient(90deg,rgba(56,189,248,.28),transparent)}
+.sm-goal.R{right:0;background:linear-gradient(270deg,rgba(251,113,133,.28),transparent)}
+.sm-mid{position:absolute;top:14px;bottom:70px;left:50%;width:0;border-left:3px dashed rgba(255,255,255,.35);transform:translateX(-50%)}
+.sm-sumo{position:absolute;bottom:52px;left:50%;transform:translateX(-50%);width:92px;text-align:center;will-change:left;z-index:3}
+.sm-sumo svg{display:block;margin:0 auto;filter:drop-shadow(0 8px 10px rgba(0,0,0,.4))}
+.sm-sumo.lunge{animation:smlunge .11s ease}
+.sm-sumo.R.lunge{animation:smlungeR .11s ease}
+@keyframes smlunge{50%{transform:translateX(-50%) translate(7px,-3px) scale(1.05,.96)}}
+@keyframes smlungeR{50%{transform:translateX(-50%) translate(-7px,-3px) scale(1.05,.96)}}
+.sm-tag{margin-top:2px;font-size:11px;font-weight:900;color:var(--te);white-space:nowrap;text-shadow:0 1px 3px #000}
+.sm-tag.you{color:#7dd3fc}
+.sm-parts{position:absolute;inset:0;pointer-events:none;z-index:4;overflow:hidden}
+.sm-puff{position:absolute;font-size:16px;animation:smpuff .5s ease-out forwards;pointer-events:none}
+@keyframes smpuff{0%{opacity:.9;transform:translate(-50%,0) scale(.6)}100%{opacity:0;transform:translate(-50%,-26px) scale(1.3)}}
+.sm-count{position:absolute;inset:0;display:none;align-items:center;justify-content:center;z-index:6;pointer-events:none}
+.sm-count b{font-family:'Righteous',cursive;font-size:88px;color:#fff;text-shadow:0 0 40px rgba(255,255,255,.5);animation:smpop .4s cubic-bezier(.34,1.56,.64,1)}
+.sm-banner{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;z-index:6;pointer-events:none;
+  background:rgba(10,8,18,.55);backdrop-filter:blur(2px);text-align:center;padding:20px}
+.sm-banner .bt{font-family:'Righteous',cursive;font-size:30px;color:#fff;text-shadow:0 4px 20px rgba(0,0,0,.6)}
+.sm-banner .bs{margin-top:8px;font-size:15px;font-weight:900;color:var(--mu)}
+@keyframes smpop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+.sm-scorebar{display:flex;align-items:center;gap:10px;justify-content:center;margin:14px 0 6px;font-weight:900}
+.sm-dot{width:13px;height:13px;border-radius:50%;background:var(--bd);transition:background .2s}
+.sm-power{height:12px;border-radius:8px;background:var(--ca2);overflow:hidden;margin-top:6px;border:1px solid var(--bd)}
+.sm-power i{display:block;height:100%;width:0;border-radius:8px;background:linear-gradient(90deg,#38BDF8,#22D3EE);transition:width .1s linear}
+.sm-tapbtn{margin-top:14px;background:linear-gradient(135deg,#38BDF8,#22D3EE);color:#04283a;border:none;border-radius:16px;
+  width:100%;padding:20px;font-size:20px;font-weight:900;font-family:'Nunito',sans-serif;cursor:pointer;touch-action:manipulation;box-shadow:0 6px 0 #1b7fa8;transition:transform .05s,box-shadow .05s}
+.sm-tapbtn:active{transform:translateY(4px);box-shadow:0 2px 0 #1b7fa8}
 </style>
 </head>
 <body>
@@ -3750,6 +3798,381 @@ function bindEK(){
 
 
 // ═══════════════════════════════════════════════════════
+// SUMO SMASH  (tap-battle: solo vs bot or online 1v1 rooms)
+// ═══════════════════════════════════════════════════════
+const SM_ROOT="sumo1";
+const SM_WIN=12, SM_CAP=16000, SM_COUNT=3200, SM_ROUNDGAP=2200, SM_MATCH=2; // first to 2
+const SM_BOT={easy:4,med:5.5,hard:7.5};
+const SM_BOTNAME={easy:"Rookie Bot",med:"Sumo Bot",hard:"Yokozuna Bot"};
+
+let SM_mode="solo", SM_diff="med";
+let SM_myTaps=0, SM_botTaps=0, SM_botAcc=0, SM_burst=0;
+let SM_baseL=0, SM_baseR=0;
+let SM_localPos=0, SM_dispPos=0, SM_livePos=0;
+let SM_raf=null, SM_hostTimer=null, SM_writeTimer=null, SM_lastFrame=0;
+let SM_liveRef=null, SM_liveCb=null, SM_tapsRef=null, SM_tapsCb=null, SM_remoteTaps={};
+let SM_keyHandler=null, SM_tapTimes=[], SM_lastWrite=-1;
+
+const SM_stRef=()=>db.ref(`${SM_ROOT}/${roomCode}/state`);
+const SM_acRef=()=>db.ref(`${SM_ROOT}/${roomCode}/actions`);
+const SM_clean=r=>!r?null:{...r,players:toArr(r.players)};
+const SM_meIdx=()=>SM_mode==="solo"?0:(isHost?0:1);
+
+// cute team-belted sumo
+function SM_sumoSVG(belt,flip){
+  const skin="#F2C9A0", sh="#D9A878";
+  return `<svg viewBox="0 0 100 112" width="84" height="94" style="transform:scaleX(${flip?-1:1})">
+    <ellipse cx="34" cy="104" rx="15" ry="7" fill="${sh}"/><ellipse cx="66" cy="104" rx="15" ry="7" fill="${sh}"/>
+    <path d="M50 34 C22 34 16 66 20 88 C22 100 78 100 80 88 C84 66 78 34 50 34Z" fill="${skin}"/>
+    <path d="M24 82 C22 92 78 92 76 82 L78 92 C74 102 26 102 22 92Z" fill="${belt}"/>
+    <rect x="46" y="80" width="8" height="16" rx="3" fill="${belt}"/>
+    <ellipse cx="22" cy="66" rx="9" ry="12" fill="${skin}"/><ellipse cx="78" cy="66" rx="9" ry="12" fill="${skin}"/>
+    <circle cx="50" cy="26" r="19" fill="${skin}"/>
+    <path d="M33 20 C33 8 67 8 67 20 C60 15 40 15 33 20Z" fill="#2b2333"/>
+    <ellipse cx="50" cy="9" rx="7" ry="5" fill="#2b2333"/>
+    <rect x="33" y="17" width="34" height="5" rx="2.5" fill="${belt}"/>
+    <circle cx="43" cy="27" r="2.4" fill="#2b2333"/><circle cx="57" cy="27" r="2.4" fill="#2b2333"/>
+    <circle cx="38" cy="32" r="3" fill="#ff9db0" opacity=".55"/><circle cx="62" cy="32" r="3" fill="#ff9db0" opacity=".55"/>
+    <path d="M45 34 Q50 38 55 34" stroke="#2b2333" stroke-width="2" fill="none" stroke-linecap="round"/>
+  </svg>`;
+}
+
+function SM_scrSetup(){return `
+<div class="fade" style="padding-top:20px">
+  <button class="btn" id="sm-back" style="background:var(--ca2);color:var(--mu);border:1px solid var(--bd);width:auto;padding:8px 16px;font-size:13px;margin-bottom:22px">← Back</button>
+  <div style="text-align:center;margin-bottom:26px">
+    <div style="font-size:40px">🤼</div>
+    <div class="hf" style="font-size:40px;color:#38BDF8;letter-spacing:1px;line-height:1;text-shadow:0 0 50px rgba(56,189,248,.4)">SUMO SMASH</div>
+    <div style="color:var(--mu);margin-top:8px;font-size:14px">Mash the button to shove your rival out of the ring 💥</div>
+  </div>
+  <div class="card" style="margin-bottom:18px">
+    <span class="lbl">🤖 Play vs Bot</span>
+    <div class="g2" style="grid-template-columns:1fr 1fr 1fr;margin-top:4px">
+      <button class="btn sm-diff" data-d="easy" style="background:var(--ca2);color:var(--te);border:2px solid var(--bd);padding:13px 6px;font-size:14px">😴 Easy</button>
+      <button class="btn sm-diff" data-d="med"  style="background:var(--ca2);color:var(--te);border:2px solid var(--bd);padding:13px 6px;font-size:14px">💪 Medium</button>
+      <button class="btn sm-diff" data-d="hard" style="background:var(--ca2);color:var(--te);border:2px solid var(--bd);padding:13px 6px;font-size:14px">🔥 Hard</button>
+    </div>
+  </div>
+  <div style="text-align:center;color:var(--mu);font-size:11px;letter-spacing:2px;font-weight:900;margin-bottom:14px">— OR PLAY WITH A FRIEND —</div>
+  <div class="card" style="margin-bottom:16px"><span class="lbl">Your Name</span><input class="inp" id="sm-ni" placeholder="What should we call you?" maxlength="20" style="border-color:#38BDF8"></div>
+  <button class="btn" id="sm-cbtn" style="background:#38BDF8;color:#04283a;margin-bottom:12px;font-size:17px;padding:15px">🤝 Create Room</button>
+  <div class="row">
+    <input class="inp" id="sm-ji" placeholder="CODE" maxlength="4" style="flex:1;text-transform:uppercase;letter-spacing:8px;text-align:center;font-size:22px">
+    <button class="btn" id="sm-jbtn" style="background:var(--ca2);color:var(--te);border:2px solid var(--bd);width:auto;padding:14px 20px;font-size:16px;flex-shrink:0">Join →</button>
+  </div>
+</div>`;}
+
+function SM_scrLobby(){
+  const rows=gs.players.map((p,i)=>`<div style="display:flex;align-items:center;gap:10px;padding:9px 0;font-weight:800"><span style="font-size:22px">${p.av}</span><span>${p.name}</span><span style="margin-left:auto;font-size:11px;color:var(--mu);font-weight:900">${i===0?"🔵 LEFT · HOST":"🔴 RIGHT"}</span></div>`).join("");
+  const ready=gs.players.length>=2;
+  return `
+<div class="fade" style="padding-top:20px">
+  <button class="btn" id="sm-back" style="background:var(--ca2);color:var(--mu);border:1px solid var(--bd);width:auto;padding:8px 16px;font-size:13px;margin-bottom:22px">← Leave</button>
+  <div style="text-align:center;margin-bottom:26px">
+    <span class="lbl">Room Code</span>
+    <div class="hf" style="font-size:72px;color:#38BDF8;letter-spacing:16px;line-height:1;text-shadow:0 0 50px rgba(56,189,248,.35)">${roomCode}</div>
+    <div style="color:var(--mu);font-size:13px;margin-top:8px">Share this code with your opponent</div>
+    <button class="btn" onclick="zzShareSheet(currentGame,roomCode)" style="display:inline-block;width:auto;background:var(--ca2);color:var(--te);border:1px solid var(--bd);margin-top:14px;padding:11px 22px;font-size:14px;font-weight:800">🔗 Invite friend</button>
+  </div>
+  <div class="card" style="margin-bottom:20px"><span class="lbl">Wrestlers · ${gs.players.length}/2</span><div>${rows}</div></div>
+  ${isHost
+    ? `<button class="btn" id="sm-start" style="background:#38BDF8;color:#04283a;font-size:17px;padding:16px" ${ready?"":"disabled"}>${ready?"Start Match →":"Waiting for opponent…"}</button>`
+    : `<div style="text-align:center;color:var(--mu);font-size:16px;padding:20px"><span class="blink">⏳</span> Waiting for host to start…</div>`}
+</div>`;}
+
+function SM_scrGame(){
+  const L=gs.players[0], R=gs.players[1];
+  const meL=SM_meIdx()===0;
+  const dot=(n,side)=>[0,1].map(i=>`<span class="sm-dot" style="${i<n?`background:${side}`:""}"></span>`).join("");
+  return `
+<div class="fade" style="padding-top:14px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+    <button class="btn" id="sm-back" style="background:var(--ca2);color:var(--mu);border:1px solid var(--bd);width:auto;padding:7px 13px;font-size:12px">← Quit</button>
+    <div style="font-weight:900;color:var(--mu);font-size:13px">Round ${gs.round} · first to ${SM_MATCH}</div>
+  </div>
+  <div class="sm-scorebar">
+    <span style="color:#38BDF8">${L.av} ${L.name}${meL&&SM_mode!=="solo"?" (you)":""}</span>
+    <span style="display:inline-flex;gap:5px">${dot(L.score,"#38BDF8")}</span>
+    <span style="color:var(--mu)">vs</span>
+    <span style="display:inline-flex;gap:5px">${dot(R.score,"#FB7185")}</span>
+    <span style="color:#FB7185">${R.name}${!meL&&SM_mode!=="solo"?" (you)":""} ${R.av}</span>
+  </div>
+  <div id="sm-arena">
+    <div class="sm-goal L"></div><div class="sm-goal R"></div>
+    <div class="sm-ring"></div>
+    <div class="sm-mid"></div>
+    <div class="sm-parts" id="sm-parts"></div>
+    <div class="sm-sumo L" id="sm-L">${SM_sumoSVG("#38BDF8",false)}<div class="sm-tag${meL?" you":""}">${L.name}</div></div>
+    <div class="sm-sumo R" id="sm-R">${SM_sumoSVG("#FB7185",true)}<div class="sm-tag${!meL?" you":""}">${R.name}</div></div>
+    <div class="sm-count" id="sm-count"><b>3</b></div>
+    <div class="sm-banner" id="sm-banner"><div class="bt"></div><div class="bs"></div></div>
+  </div>
+  <div class="sm-power"><i id="sm-power"></i></div>
+  <button class="sm-tapbtn" id="sm-tap">👊 SMASH!</button>
+  <div style="text-align:center;color:var(--mu);font-size:12px;margin-top:8px">Tap the button, tap the ring, or mash <b>SPACE</b> — fastest tapper wins!</div>
+</div>`;}
+
+function SM_scrOver(){
+  const meIdx=SM_meIdx();
+  const win=gs.winner;
+  const iWon=win===meIdx;
+  const wp=gs.players[win];
+  setTimeout(()=>{try{playSfx(iWon?'win':'fool');}catch(e){}if(iWon)zzWin('sumo-fin-'+(roomCode||SM_diff),true);},200);
+  return `
+<div class="fade" style="padding-top:40px;text-align:center">
+  <div style="font-size:64px;margin-bottom:6px">${iWon?"🏆":"😤"}</div>
+  <div class="hf" style="font-size:34px;color:${win===0?"#38BDF8":"#FB7185"};text-shadow:0 0 40px rgba(56,189,248,.3)">${iWon?"YOU WIN!":wp.name+" WINS!"}</div>
+  <div style="color:var(--mu);font-weight:800;margin-top:8px;font-size:15px">${gs.players[0].name} ${gs.players[0].score} — ${gs.players[1].score} ${gs.players[1].name}</div>
+  <div style="margin-top:30px">
+    ${SM_mode==="solo"
+      ? `<button class="btn" id="sm-again" style="background:#38BDF8;color:#04283a;font-size:17px;padding:15px;margin-bottom:12px">🔁 Rematch</button>
+         <button class="btn" id="sm-back" style="background:var(--ca2);color:var(--te);border:1px solid var(--bd);font-size:15px;padding:13px">Change difficulty</button>`
+      : (isHost
+          ? `<button class="btn" id="sm-again" style="background:#38BDF8;color:#04283a;font-size:17px;padding:15px;margin-bottom:12px">🔁 Rematch</button>
+             <button class="btn" id="sm-back" style="background:var(--ca2);color:var(--te);border:1px solid var(--bd);font-size:15px;padding:13px">Exit</button>`
+          : `<div style="color:var(--mu);font-size:15px;font-weight:800;padding:14px"><span class="blink">⏳</span> Waiting for host to rematch…</div>
+             <button class="btn" id="sm-back" style="background:var(--ca2);color:var(--te);border:1px solid var(--bd);font-size:15px;padding:13px;margin-top:10px">Exit</button>`)}
+  </div>
+</div>`;}
+
+// ── entry actions ──
+function SM_startSolo(diff){
+  SM_teardown();
+  SM_mode="solo";SM_diff=diff;isHost=true;roomCode="";
+  SM_myTaps=0;SM_botTaps=0;SM_botAcc=0;SM_burst=0;SM_localPos=0;SM_dispPos=0;SM_tapTimes=[];
+  gs={mode:"solo",phase:"count",round:1,pos:0,startAt:ms()+SM_COUNT,capAt:0,nextAt:0,roundWinner:null,winner:null,
+      players:[{id:"you",name:"You",av:myAv,score:0},{id:"bot",name:SM_BOTNAME[diff],av:"🤖",score:0}]};
+  render();
+}
+async function SM_createRoom(){
+  SM_teardown();
+  SM_mode="online";roomCode=rc();isHost=true;
+  SM_myTaps=0;SM_localPos=0;SM_dispPos=0;SM_livePos=0;SM_tapTimes=[];SM_remoteTaps={};
+  gs={mode:"online",phase:"lobby",round:1,pos:0,startAt:0,capAt:0,nextAt:0,roundWinner:null,winner:null,
+      players:[{id:myId,name:myName,av:myAv,score:0}]};
+  await SM_stRef().set(gs);
+  await db.ref(`${SM_ROOT}/${roomCode}/live`).set({pos:0,ts:ms()});
+  SM_tapsRef=db.ref(`${SM_ROOT}/${roomCode}/taps`);
+  SM_tapsCb=snap=>{SM_remoteTaps=snap.val()||{};};
+  SM_tapsRef.on("value",SM_tapsCb);
+  SM_liveRef=db.ref(`${SM_ROOT}/${roomCode}/live`);
+  SM_hostTimer=setInterval(SM_hostTick,110);
+  SM_startWriter();
+  listenToState(roomCode,SM_ROOT,SM_clean);
+  render();
+}
+async function SM_joinRoom(code){
+  SM_teardown();
+  SM_mode="online";roomCode=code;isHost=false;
+  SM_myTaps=0;SM_localPos=0;SM_dispPos=0;SM_livePos=0;SM_tapTimes=[];
+  const snap=await SM_stRef().once("value");
+  if(!snap.exists()){toast("Room not found!","err");roomCode="";render();return;}
+  const data=SM_clean(snap.val());
+  if(data.phase!=="lobby"){toast("Match already in progress!","err");roomCode="";render();return;}
+  if(data.players.length>=2){toast("Room is full!","err");roomCode="";render();return;}
+  gs=data;
+  await SM_acRef().push({type:"JOIN",id:myId,name:myName,av:myAv,_ts:ms()});
+  SM_liveRef=db.ref(`${SM_ROOT}/${roomCode}/live`);
+  SM_liveCb=snap=>{const v=snap.val();if(v&&typeof v.pos==="number")SM_livePos=v.pos;};
+  SM_liveRef.on("value",SM_liveCb);
+  SM_tapsRef=db.ref(`${SM_ROOT}/${roomCode}/taps`);
+  SM_startWriter();
+  listenToState(code,SM_ROOT,SM_clean);
+  render();
+}
+function SM_startWriter(){
+  if(SM_writeTimer)clearInterval(SM_writeTimer);
+  SM_writeTimer=setInterval(()=>{
+    if(SM_mode!=="online"||!roomCode)return;
+    if(SM_myTaps!==SM_lastWrite){SM_lastWrite=SM_myTaps;SM_tapsRef.child(myId).set(SM_myTaps);}
+  },90);
+}
+function SM_writeState(){ if(isHost){gs.pos=SM_localPos;SM_stRef().set(gs);} }
+function SM_hostStart(){
+  gs.players.forEach(p=>p.score=0);
+  gs.round=1;gs.roundWinner=null;gs.winner=null;
+  gs.phase="count";gs.startAt=ms()+SM_COUNT;
+  SM_localPos=0;SM_livePos=0;
+  if(SM_liveRef)SM_liveRef.set({pos:0,ts:ms()});
+  SM_writeState();render();
+}
+
+// ── host authoritative tick (online) ──
+function SM_hostTick(){
+  if(!gs||SM_mode!=="online"||!isHost)return;
+  const now=ms();
+  if(gs.phase==="lobby"){
+    SM_acRef().once("value").then(snap=>{
+      const acts=snap.val();if(!acts)return;let changed=false;
+      for(const k of Object.keys(acts).sort()){
+        const a=acts[k];SM_acRef().child(k).remove();
+        if(a&&a.type==="JOIN"&&a.id&&gs.players.length<2&&!gs.players.find(p=>p.id===a.id)){
+          gs.players.push({id:a.id,name:a.name||"Player 2",av:a.av||"🔴",score:0});changed=true;
+        }
+      }
+      if(changed)SM_writeState();
+    }).catch(()=>{});
+    return;
+  }
+  if(gs.phase==="count"){
+    if(now>=gs.startAt){
+      SM_baseL=SM_myTaps;SM_baseR=(SM_remoteTaps[gs.players[1].id]||0);
+      SM_localPos=0;gs.phase="play";gs.capAt=now+SM_CAP;SM_writeState();
+    }
+    return;
+  }
+  if(gs.phase==="play"){
+    const gid=gs.players[1].id;
+    const D=(SM_myTaps-SM_baseL)-((SM_remoteTaps[gid]||0)-SM_baseR);
+    SM_localPos=Math.max(-1,Math.min(1,D/SM_WIN));
+    if(SM_liveRef)SM_liveRef.set({pos:SM_localPos,ts:now});
+    let w=null;
+    if(D>=SM_WIN)w=0;else if(D<=-SM_WIN)w=1;else if(now>=gs.capAt)w=(D>=0?0:1);
+    if(w!==null)SM_endRound(w);
+    return;
+  }
+  if(gs.phase==="round"){ if(now>=gs.nextAt)SM_nextRound(); }
+}
+function SM_endRound(w){
+  gs.players[w].score++;gs.roundWinner=w;SM_localPos=w===0?1:-1;
+  if(SM_liveRef&&SM_mode==="online")SM_liveRef.set({pos:SM_localPos,ts:ms()});
+  if(gs.players[w].score>=SM_MATCH){gs.phase="over";gs.winner=w;if(SM_mode==="online"){SM_writeState();render();}}
+  else{gs.phase="round";gs.nextAt=ms()+SM_ROUNDGAP;if(SM_mode==="online")SM_writeState();}
+}
+function SM_nextRound(){
+  gs.round++;gs.phase="count";gs.startAt=ms()+SM_COUNT;gs.roundWinner=null;
+  SM_localPos=0;SM_livePos=0;SM_myTaps=SM_myTaps;
+  if(SM_liveRef&&SM_mode==="online")SM_liveRef.set({pos:0,ts:ms()});
+  if(SM_mode==="online")SM_writeState();
+}
+
+// ── input ──
+function SM_tap(){
+  if(!gs||gs.phase!=="play")return;
+  SM_myTaps++;SM_tapTimes.push(ms());SM_lunge(SM_meIdx());SM_puff(SM_meIdx());
+}
+function SM_lunge(idx){
+  const el=document.getElementById(idx===0?"sm-L":"sm-R");
+  if(!el)return;el.classList.remove("lunge");void el.offsetWidth;el.classList.add("lunge");
+}
+function SM_puff(idx){
+  if(Math.random()<0.4)return;
+  const layer=document.getElementById("sm-parts");if(!layer)return;
+  const contact=50+SM_dispPos*34;
+  const d=document.createElement("div");d.className="sm-puff";
+  d.textContent=Math.random()<0.5?"💢":"💨";
+  d.style.left=(contact+(idx===0?-6:6))+"%";d.style.top=(46+Math.random()*16)+"%";
+  layer.appendChild(d);setTimeout(()=>d.remove(),500);
+}
+
+// ── solo step (runs inside rAF) ──
+function SM_soloStep(dt){
+  const now=ms();
+  if(gs.phase==="count"){
+    if(now>=gs.startAt){SM_myTaps=0;SM_botTaps=0;SM_botAcc=0;SM_burst=0;SM_localPos=0;gs.phase="play";gs.capAt=now+SM_CAP;}
+    return;
+  }
+  if(gs.phase==="play"){
+    if(SM_burst>0)SM_burst-=dt;
+    if(Math.random()<0.35*dt)SM_burst=0.45;
+    const br=SM_BOT[SM_diff]*(SM_burst>0?1.4:1)*(0.82+0.36*Math.random());
+    SM_botAcc+=br*dt;
+    while(SM_botAcc>=1){SM_botTaps++;SM_botAcc--;SM_lunge(1);if(Math.random()<0.5)SM_puff(1);}
+    const D=SM_myTaps-SM_botTaps;
+    SM_localPos=Math.max(-1,Math.min(1,D/SM_WIN));
+    let w=null;
+    if(D>=SM_WIN)w=0;else if(D<=-SM_WIN)w=1;else if(now>=gs.capAt)w=(D>=0?0:1);
+    if(w!==null)SM_endRound(w);
+    return;
+  }
+  if(gs.phase==="round"){ if(now>=gs.nextAt){SM_nextRound();} }
+}
+
+// ── animation / overlay loop (all players on arena) ──
+function SM_loop(t){
+  const arena=document.getElementById("sm-arena");
+  if(!arena||!gs){SM_raf=null;return;}
+  const dt=Math.min(0.05,(t-SM_lastFrame)/1000||0.016);SM_lastFrame=t;
+  if(SM_mode==="solo")SM_soloStep(dt);
+  if(gs.phase==="over"){render();return;}
+  // target position
+  const target=(SM_mode==="online"&&!isHost)?SM_livePos:SM_localPos;
+  SM_dispPos+=(target-SM_dispPos)*0.25;
+  const contact=50+SM_dispPos*34;
+  const L=document.getElementById("sm-L"),R=document.getElementById("sm-R");
+  if(L)L.style.left=(contact-11)+"%";
+  if(R)R.style.left=(contact+11)+"%";
+  // countdown overlay
+  const cEl=document.getElementById("sm-count");
+  if(cEl){
+    if(gs.phase==="count"){
+      const rem=gs.startAt-ms();cEl.style.display="flex";
+      cEl.querySelector("b").textContent=rem>0?Math.ceil(rem/1000):"GO!";
+    } else cEl.style.display="none";
+  }
+  // round banner
+  const bEl=document.getElementById("sm-banner");
+  if(bEl){
+    if(gs.phase==="round"&&gs.roundWinner!=null){
+      bEl.style.display="flex";
+      bEl.querySelector(".bt").textContent=`${gs.players[gs.roundWinner].name} takes the round!`;
+      bEl.querySelector(".bs").textContent=`${gs.players[0].score} — ${gs.players[1].score}`;
+    } else bEl.style.display="none";
+  }
+  // power bar (your recent tap rate)
+  const cut=ms()-1000;while(SM_tapTimes.length&&SM_tapTimes[0]<cut)SM_tapTimes.shift();
+  const pw=document.getElementById("sm-power");
+  if(pw)pw.style.width=Math.min(100,(SM_tapTimes.length/12)*100)+"%";
+  SM_raf=requestAnimationFrame(SM_loop);
+}
+
+function SM_teardown(){
+  if(SM_raf)cancelAnimationFrame(SM_raf);SM_raf=null;
+  if(SM_hostTimer)clearInterval(SM_hostTimer);SM_hostTimer=null;
+  if(SM_writeTimer)clearInterval(SM_writeTimer);SM_writeTimer=null;
+  if(SM_liveRef&&SM_liveCb)SM_liveRef.off("value",SM_liveCb);
+  if(SM_tapsRef&&SM_tapsCb)SM_tapsRef.off("value",SM_tapsCb);
+  SM_liveRef=null;SM_liveCb=null;SM_tapsRef=null;SM_tapsCb=null;SM_remoteTaps={};
+  if(SM_keyHandler){document.removeEventListener("keydown",SM_keyHandler);SM_keyHandler=null;}
+  SM_lastWrite=-1;
+}
+
+function renderSumo(){
+  const app=document.getElementById("app");if(!app)return;
+  const p=gs?.phase||"";
+  if(!gs||!gs.mode)app.innerHTML=SM_scrSetup();
+  else if(p==="lobby")app.innerHTML=SM_scrLobby();
+  else if(p==="over")app.innerHTML=SM_scrOver();
+  else app.innerHTML=SM_scrGame();
+  bindSumo();
+}
+function bindSumo(){
+  const $=id=>document.getElementById(id),on=(id,fn)=>{const el=$(id);if(el)el.onclick=fn;};
+  on("sm-back",()=>{SM_teardown();currentGame=null;gs=null;roomCode="";
+    if(stateRefListener&&stateCallback)stateRefListener.off("value",stateCallback);
+    if(statePoller)clearInterval(statePoller);if(actTimer)clearInterval(actTimer);render();});
+  document.querySelectorAll(".sm-diff").forEach(b=>b.onclick=()=>SM_startSolo(b.getAttribute("data-d")));
+  on("sm-cbtn",async()=>{myName=$("sm-ni")?.value.trim();if(!myName){toast("Enter your name!","err");return;}$("sm-cbtn").disabled=true;$("sm-cbtn").textContent="Creating…";await SM_createRoom();});
+  on("sm-jbtn",async()=>{myName=$("sm-ni")?.value.trim();const c=$("sm-ji")?.value.toUpperCase().trim();if(!myName){toast("Enter your name!","err");return;}if(!c||c.length!==4){toast("Need a 4-letter code","err");return;}$("sm-jbtn").disabled=true;$("sm-jbtn").textContent="Joining…";await SM_joinRoom(c);});
+  const ni=$("sm-ni");if(ni){ni.onkeydown=e=>{if(e.key==="Enter")$("sm-cbtn")?.click();};}
+  const ji=$("sm-ji");if(ji)ji.onkeydown=e=>{if(e.key==="Enter")$("sm-jbtn")?.click();};
+  on("sm-start",()=>{if(gs.players.length>=2)SM_hostStart();});
+  on("sm-again",()=>{if(SM_mode==="solo")SM_startSolo(SM_diff);else SM_hostStart();});
+  // arena: tap handlers + animation loop
+  const arena=$("sm-arena");
+  if(arena){
+    const tapb=$("sm-tap");
+    const handler=e=>{e.preventDefault();SM_tap();};
+    arena.onpointerdown=handler;
+    if(tapb)tapb.onpointerdown=handler;
+    SM_keyHandler=e=>{if(e.code==="Space"||e.key===" "){e.preventDefault();SM_tap();}};
+    document.addEventListener("keydown",SM_keyHandler);
+    if(SM_raf)cancelAnimationFrame(SM_raf);
+    SM_lastFrame=performance.now();SM_raf=requestAnimationFrame(SM_loop);
+  } else if(SM_raf){cancelAnimationFrame(SM_raf);SM_raf=null;}
+}
+
+// ═══════════════════════════════════════════════════════
 // HOME SCREEN
 // ═══════════════════════════════════════════════════════
 function scrHome(){
@@ -3759,6 +4182,7 @@ function scrHome(){
     {t:"BLUFF",             c:"#FF3D71", i:"🃏", b:"Card Game",   m:"👥 2–8",        d:"Dump cards face-down claiming a rank — bluff when you don't have it. Get caught and you grab the whole pile. Empty your hand to win.", go:"currentGame='bluff';render();"},
     {t:"CABO",              c:"#00E096", i:"🎴", b:"Memory Cards", m:"👥 2–8",        d:"Peek, draw, swap and use card powers to shrink your total — and remember everyone's cards. Call \"Cabo\" when you're lowest.", go:"currentGame='cabo';render();"},
     {t:"EXPLODING KITTENS", c:"#FF6F91", i:"🙀", b:"Solo & Rooms", m:"👤 Solo · 👥 2–5", d:"Draw cards… just don't draw a kitten 🙀 Use Skips, Attacks, Favors and Nopes to survive. Last cat standing wins.", go:"currentGame='ek';render();"},
+    {t:"SUMO SMASH",        c:"#38BDF8", i:"🤼", b:"Tap Battle",   m:"👤 Solo · 👥 1v1", d:"A frantic tap battle 💥 Mash as fast as you can to shove your rival out of the ring. Play a bot or a friend — best of 3 wins.", go:"currentGame='sumo';render();"},
     {t:"PICTIONARY",        c:"#06B6D4", i:"🎨", b:"Draw & Guess", m:"👥 2–8",        d:"One player draws, everyone guesses in real time. First correct guess wins — bad drawings are funnier anyway.", go:"currentGame='draw';render();"},
     {t:"TYPE",              c:"#e2b714", i:"⌨️", b:"Solo & Race", m:"👤 Solo · 👥 2–8", d:"A clean typing speed test. Play solo to measure your WPM and accuracy, or race friends on the same words live.", go:"currentGame='type';TYPE_view='menu';render();"},
     {t:"BASKETBALL",        c:"#E8622C", i:"🏀", b:"Solo Arcade", m:"👤 Solo",       d:"Drag to aim, release to shoot 🏀 Sink it from a brand-new spot every score. Chase your best streak, unlock 12 ball skins.", href:"hoops/"},
@@ -3817,13 +4241,14 @@ function render(){
   if(currentGame==="bluff"){renderBluff(); return;}
   if(currentGame==="cabo") {renderCabo(); return;}
   if(currentGame==="ek")   {renderEK(); return;}
+  if(currentGame==="sumo") {renderSumo(); return;}
 }
 
 // ═══════════════════════════════════════════════════════
 // INVITE / SHARE  (foolproof: native share sheet on mobile,
 // explicit WhatsApp / Email / Copy everywhere as a fallback)
 // ═══════════════════════════════════════════════════════
-const ZZ_NAMES={blitz:"BLITZ",psych:"PSYCH",bluff:"BLUFF",cabo:"CABO",draw:"PICTIONARY",type:"Typing Race",ek:"Exploding Kittens"};
+const ZZ_NAMES={blitz:"BLITZ",psych:"PSYCH",bluff:"BLUFF",cabo:"CABO",draw:"PICTIONARY",type:"Typing Race",ek:"Exploding Kittens",sumo:"Sumo Smash"};
 let zzInviteGame=null, zzInviteCode=null;
 
 function zzInviteLink(game,code){
@@ -3902,7 +4327,7 @@ function zzApplyInvite(){
     const q=new URLSearchParams(location.search);
     const g=(q.get("g")||"").toLowerCase();
     const r=(q.get("r")||"").toUpperCase().replace(/[^A-Z]/g,"").slice(0,4);
-    if(!g||r.length!==4||!["blitz","psych","bluff","cabo","draw","type","ek"].includes(g)) return;
+    if(!g||r.length!==4||!["blitz","psych","bluff","cabo","draw","type","ek","sumo"].includes(g)) return;
     zzInviteGame=g; zzInviteCode=r; currentGame=g;
     if(g==="type"){ TYPE_view="mp"; TP_code=""; }
   }catch(e){}
