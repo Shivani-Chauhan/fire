@@ -3823,7 +3823,7 @@ function render(){
 // INVITE / SHARE  (foolproof: native share sheet on mobile,
 // explicit WhatsApp / Email / Copy everywhere as a fallback)
 // ═══════════════════════════════════════════════════════
-const ZZ_NAMES={blitz:"BLITZ",psych:"PSYCH",bluff:"BLUFF",cabo:"CABO",draw:"PICTIONARY",type:"Typing Race"};
+const ZZ_NAMES={blitz:"BLITZ",psych:"PSYCH",bluff:"BLUFF",cabo:"CABO",draw:"PICTIONARY",type:"Typing Race",ek:"Exploding Kittens"};
 let zzInviteGame=null, zzInviteCode=null;
 
 function zzInviteLink(game,code){
@@ -3902,7 +3902,7 @@ function zzApplyInvite(){
     const q=new URLSearchParams(location.search);
     const g=(q.get("g")||"").toLowerCase();
     const r=(q.get("r")||"").toUpperCase().replace(/[^A-Z]/g,"").slice(0,4);
-    if(!g||r.length!==4||!["blitz","psych","bluff","cabo","draw","type"].includes(g)) return;
+    if(!g||r.length!==4||!["blitz","psych","bluff","cabo","draw","type","ek"].includes(g)) return;
     zzInviteGame=g; zzInviteCode=r; currentGame=g;
     if(g==="type"){ TYPE_view="mp"; TP_code=""; }
   }catch(e){}
