@@ -461,6 +461,23 @@ body.typing-mode #app{max-width:960px}
 .sm-tapbtn{margin-top:14px;background:linear-gradient(135deg,#38BDF8,#22D3EE);color:#04283a;border:none;border-radius:16px;
   width:100%;padding:20px;font-size:20px;font-weight:900;font-family:'Nunito',sans-serif;cursor:pointer;touch-action:manipulation;box-shadow:0 6px 0 #1b7fa8;transition:transform .05s,box-shadow .05s}
 .sm-tapbtn:active{transform:translateY(4px);box-shadow:0 2px 0 #1b7fa8}
+
+/* ── HIPPO CHOMP ─────────────────────────────────────── */
+#hp-arena{position:relative;border-radius:22px;overflow:hidden;user-select:none;touch-action:manipulation;cursor:pointer;line-height:0;
+  box-shadow:inset 0 0 0 3px rgba(255,255,255,.05),0 10px 30px rgba(0,0,0,.4)}
+#hp-cv{display:block;width:100%}
+.hp-half{position:absolute;left:0;right:0;height:50%;z-index:2}
+.hp-half.top{top:0}.hp-half.bottom{bottom:0}
+.hp-tapbtn{margin-top:12px;border:none;border-radius:16px;width:100%;padding:20px;font-size:20px;font-weight:900;
+  font-family:'Nunito',sans-serif;cursor:pointer;touch-action:manipulation;transition:transform .05s,box-shadow .05s;color:#fff}
+.hp-tapbtn:active{transform:translateY(4px)}
+.hp-tapbtn.pink{background:linear-gradient(135deg,#FF4D8D,#FF7EB0);box-shadow:0 6px 0 #b52f63}
+.hp-tapbtn.pink:active{box-shadow:0 2px 0 #b52f63}
+.hp-tapbtn.teal{background:linear-gradient(135deg,#2DD4BF,#5EEAD4);box-shadow:0 6px 0 #147d70;color:#04322c}
+.hp-tapbtn.teal:active{box-shadow:0 2px 0 #147d70}
+.hp-tapbtn.flip{transform:rotate(180deg);margin-top:0;margin-bottom:12px}
+.hp-tapbtn.flip:active{transform:rotate(180deg) translateY(4px)}
+.hp-diff{background:var(--ca2);color:var(--te);border:2px solid var(--bd);padding:13px 6px;font-size:14px}
 </style>
 </head>
 <body>
@@ -4173,6 +4190,363 @@ function bindSumo(){
 }
 
 // ═══════════════════════════════════════════════════════
+// HIPPO CHOMP  (tap to open your hippo's mouth & gobble your
+//               colour — solo vs bot or 2 players same device)
+// ═══════════════════════════════════════════════════════
+const HP_DUR=30000, HP_COUNTDOWN=3200;
+const HP_R=30, HP_RP=13, HP_PAD=54, HP_FOCUS=26, HP_GRAB=34, HP_LUNGEV=14;
+const HP_TRACK=2.7, HP_PER=4;
+const HP_COL={bottom:{c:"#FF4D8D",dk:"#B52F63",mo:"#7A1030",nm:"Pink"},
+              top:   {c:"#2DD4BF",dk:"#147D70",mo:"#08403A",nm:"Teal"}};
+const HP_DIFF={easy:{range:1.18,prob:.55,cd:520,track:.72,nm:"Rookie Hippo"},
+               med: {range:1.0, prob:.86,cd:360,track:.92,nm:"Snappy Hippo"},
+               hard:{range:.95,prob:.98,cd:230,track:1.12,nm:"Chompzilla"}};
+
+let HP_mode="solo", HP_diff="med";
+let HP_phase="setup";            // setup | count | play | over
+let HP_startAt=0, HP_endAt=0;
+let HP_W=340, HP_H=320, HP_dpr=1;
+let HP_cv=null, HP_ctx=null, HP_raf=null, HP_last=0;
+let HP_pellets=[], HP_puffs=[];
+let HP_hip=null;
+let HP_keyHandler=null, HP_winner=null;
+
+function HP_sfx(win){try{const c=new(window.AudioContext||window.webkitAudioContext)();const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type="square";const t=c.currentTime;o.frequency.setValueAtTime(win?520:300,t);o.frequency.exponentialRampToValueAtTime(win?900:560,t+.08);g.gain.setValueAtTime(.05,t);g.gain.exponentialRampToValueAtTime(.001,t+.15);o.start(t);o.stop(t+.16);}catch(e){}}
+
+function HP_newHip(){
+  return {bottom:{x:HP_W/2,baseY:HP_H-HP_R,score:0,chompAt:-9999,tx:HP_W/2},
+          top:   {x:HP_W/2,baseY:HP_R,      score:0,chompAt:-9999,tx:HP_W/2}};
+}
+function HP_spawnPellet(side,center){
+  const p=HP_PAD;
+  const x=center?HP_W/2+(Math.random()*44-22):p+Math.random()*(HP_W-2*p);
+  const y=center?HP_H/2+(Math.random()*30-15):p+Math.random()*(HP_H-2*p);
+  const a=Math.random()*Math.PI*2, s=1.0+Math.random()*0.9;
+  HP_pellets.push({side,x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,pop:center?0:1,hop:Math.random()*6.28});
+}
+function HP_ensureField(){
+  for(const side of ["bottom","top"]){
+    let n=HP_pellets.filter(p=>p.side===side).length;
+    while(n<HP_PER){HP_spawnPellet(side,false);n++;}
+  }
+}
+function HP_focus(side){
+  const h=HP_hip[side], dir=side==="bottom"?-1:1;
+  return {x:h.x, y:h.baseY+dir*HP_FOCUS};
+}
+function HP_eat(p,side){
+  HP_puffs.push({x:p.x,y:p.y,t:ms(),side});
+  const i=HP_pellets.indexOf(p); if(i>=0)HP_pellets.splice(i,1);
+  HP_spawnPellet(side,true);
+  HP_sfx(true);
+}
+function HP_chomp(side){
+  if(HP_phase!=="play"||!HP_hip)return;
+  const now=ms(), h=HP_hip[side];
+  if(now-h.chompAt<150)return;
+  h.chompAt=now;
+  const f=HP_focus(side);
+  let best=null,bd=1e9;
+  for(const p of HP_pellets){ if(p.side!==side)continue; const d=Math.hypot(p.x-f.x,p.y-f.y); if(d<bd){bd=d;best=p;} }
+  if(best&&bd<=HP_GRAB){ h.score++; HP_eat(best,side); }
+  else{ try{playSfx();}catch(e){} }
+}
+function HP_openOf(h,now){
+  const el=now-h.chompAt;
+  if(el<0||el>230)return 0;
+  return el<90? el/90 : 1-(el-90)/140;
+}
+function HP_track(side,spdMul){
+  const h=HP_hip[side];
+  let best=null,bd=1e9;
+  for(const p of HP_pellets){ if(p.side!==side)continue; const d=Math.hypot(p.x-h.x,p.y-h.baseY); if(d<bd){bd=d;best=p;} }
+  if(best)h.tx=best.x;
+  const spd=HP_TRACK*spdMul, dx=h.tx-h.x, st=Math.sign(dx)*Math.min(Math.abs(dx),spd);
+  h.x+=st; h.x=Math.max(HP_R,Math.min(HP_W-HP_R,h.x));
+}
+
+// ── drawing ──
+function HP_drawBg(){
+  const g=HP_ctx.createLinearGradient(0,0,0,HP_H);
+  g.addColorStop(0,"#0d3b46");g.addColorStop(.5,"#0a2f42");g.addColorStop(1,"#0d3b46");
+  HP_ctx.fillStyle=g;HP_ctx.fillRect(0,0,HP_W,HP_H);
+  // water sheen ripples
+  HP_ctx.strokeStyle="rgba(255,255,255,.05)";HP_ctx.lineWidth=2;
+  for(let i=0;i<4;i++){HP_ctx.beginPath();HP_ctx.ellipse(HP_W/2,HP_H/2,60+i*46,26+i*20,0,0,6.28);HP_ctx.stroke();}
+  // coloured landing zones
+  HP_tint(HP_COL.bottom.c,HP_H,1);HP_tint(HP_COL.top.c,0,-1);
+}
+function HP_tint(col,y0,dir){
+  const g=HP_ctx.createLinearGradient(0,y0,0,y0+dir*70);
+  g.addColorStop(0,col+"33");g.addColorStop(1,col+"00");
+  HP_ctx.fillStyle=g;HP_ctx.fillRect(0,dir>0?y0-70:0,HP_W,70);
+}
+function HP_drawPellet(p){
+  const c=HP_ctx, col=HP_COL[p.side];
+  const hop=Math.abs(Math.sin(p.hop))*7;
+  const x=p.x, y=p.y-hop, r=HP_RP*(0.6+0.4*Math.min(1,p.pop));
+  // shadow
+  c.fillStyle="rgba(0,0,0,.22)";c.beginPath();c.ellipse(p.x,p.y+HP_RP*0.7,r*0.8,r*0.32,0,0,6.28);c.fill();
+  // ears
+  c.fillStyle=col.dk;
+  c.beginPath();c.arc(x-r*0.6,y-r*0.7,r*0.32,0,6.28);c.arc(x+r*0.6,y-r*0.7,r*0.32,0,6.28);c.fill();
+  // head
+  c.fillStyle=col.c;c.beginPath();c.arc(x,y,r,0,6.28);c.fill();
+  // snout
+  c.fillStyle=col.dk;c.beginPath();c.ellipse(x,y+r*0.32,r*0.62,r*0.44,0,0,6.28);c.fill();
+  // nostrils
+  c.fillStyle="rgba(0,0,0,.55)";
+  c.beginPath();c.arc(x-r*0.24,y+r*0.3,r*0.1,0,6.28);c.arc(x+r*0.24,y+r*0.3,r*0.1,0,6.28);c.fill();
+  // eyes
+  c.fillStyle="#fff";c.beginPath();c.arc(x-r*0.34,y-r*0.28,r*0.2,0,6.28);c.arc(x+r*0.34,y-r*0.28,r*0.2,0,6.28);c.fill();
+  c.fillStyle="#12202a";c.beginPath();c.arc(x-r*0.32,y-r*0.26,r*0.1,0,6.28);c.arc(x+r*0.36,y-r*0.26,r*0.1,0,6.28);c.fill();
+}
+function HP_drawHippo(side,now){
+  const c=HP_ctx, col=HP_COL[side], h=HP_hip[side];
+  const dir=side==="bottom"?-1:1;                 // mouth faces into arena
+  const open=HP_openOf(h,now);
+  const cy=h.baseY+dir*open*HP_LUNGEV;
+  const cx=h.x, R=HP_R;
+  const A=dir<0?-Math.PI/2:Math.PI/2;             // facing angle
+  const mo=open*0.95;                              // half mouth angle
+  // inner mouth
+  c.fillStyle=col.mo;c.beginPath();c.arc(cx,cy,R,0,6.28);c.fill();
+  // ears (back side)
+  const back=A+Math.PI;
+  for(const s of [-0.6,0.6]){const ex=cx+Math.cos(back+s)*R*0.9,ey=cy+Math.sin(back+s)*R*0.9;
+    c.fillStyle=col.dk;c.beginPath();c.arc(ex,ey,R*0.24,0,6.28);c.fill();
+    c.fillStyle=col.c; c.beginPath();c.arc(ex,ey,R*0.14,0,6.28);c.fill();}
+  // head with mouth wedge cut out (full circle when mouth is shut)
+  c.fillStyle=col.c;c.beginPath();
+  if(mo<0.03){c.arc(cx,cy,R,0,6.28);}
+  else{c.moveTo(cx,cy);c.arc(cx,cy,R,A+mo,A-mo,false);c.closePath();}
+  c.fill();
+  // teeth
+  if(open>0.15){c.fillStyle="#fff";
+    for(const s of [-1,1]){const ta=A+s*mo;const tx=cx+Math.cos(ta)*R*0.86,ty=cy+Math.sin(ta)*R*0.86;
+      c.beginPath();c.arc(tx,ty,R*0.09,0,6.28);c.fill();}}
+  // eyes (flank the mouth)
+  for(const s of [-1.05,1.05]){const ex=cx+Math.cos(A+s)*R*0.62,ey=cy+Math.sin(A+s)*R*0.62;
+    c.fillStyle="#fff";c.beginPath();c.arc(ex,ey,R*0.2,0,6.28);c.fill();
+    c.fillStyle="#12202a";c.beginPath();c.arc(ex,ey+dir*R*0.02,R*0.1,0,6.28);c.fill();}
+}
+function HP_drawPuffs(now){
+  const c=HP_ctx;
+  HP_puffs=HP_puffs.filter(p=>now-p.t<650);
+  for(const p of HP_puffs){const el=(now-p.t)/650;
+    c.save();c.globalAlpha=1-el;c.fillStyle=HP_COL[p.side].c;
+    c.font="900 22px Nunito,sans-serif";c.textAlign="center";
+    c.fillText("+1",p.x,p.y-el*30);c.restore();}
+}
+function HP_pill(x,y,txt,col,flip){
+  const c=HP_ctx;c.save();c.translate(x,y);if(flip)c.rotate(Math.PI);
+  c.font="900 26px Righteous,Nunito,sans-serif";c.textAlign="center";c.textBaseline="middle";
+  const w=Math.max(56,c.measureText(txt).width+34);
+  c.fillStyle="rgba(6,20,26,.6)";c.beginPath();c.roundRect(-w/2,-19,w,38,19);c.fill();
+  c.fillStyle=col;c.fillText(txt,0,1);c.restore();
+}
+function HP_drawHud(now){
+  const c=HP_ctx, flip=HP_mode==="2p";
+  // scores
+  HP_pill(48,HP_H-26,String(HP_hip.bottom.score),HP_COL.bottom.c,false);
+  HP_pill(HP_W-48,26,String(HP_hip.top.score),HP_COL.top.c,flip);
+  // timer
+  if(HP_phase==="play"){
+    const left=Math.max(0,Math.ceil((HP_endAt-now)/1000));
+    c.save();c.font="900 16px Nunito,sans-serif";c.textAlign="center";c.textBaseline="middle";
+    const tw=44;c.fillStyle=left<=5?"rgba(255,60,60,.75)":"rgba(6,20,26,.6)";
+    c.beginPath();c.roundRect(HP_W/2-tw/2,HP_H/2-16,tw,32,16);c.fill();
+    c.fillStyle="#fff";c.fillText(left+"s",HP_W/2,HP_H/2+1);c.restore();
+  }
+  // countdown
+  if(HP_phase==="count"){
+    const rem=HP_startAt-now, n=Math.ceil(rem/1000);
+    const label=n<=0?"GO!":String(n);
+    const sub=(n%1000);
+    c.save();c.textAlign="center";c.textBaseline="middle";
+    c.font="900 72px Righteous,Nunito,sans-serif";c.fillStyle="rgba(255,255,255,.92)";
+    c.shadowColor="rgba(0,0,0,.5)";c.shadowBlur=20;
+    c.fillText(label,HP_W/2,HP_H/2);c.restore();
+  }
+}
+function HP_draw(now){
+  HP_drawBg();
+  for(const p of HP_pellets)HP_drawPellet(p);
+  HP_drawHippo("bottom",now);HP_drawHippo("top",now);
+  HP_drawPuffs(now);
+  HP_drawHud(now);
+}
+
+// ── loop ──
+function HP_loop(now){
+  if(!HP_ctx){HP_raf=null;return;}
+  const dt=Math.min(50,now-HP_last); HP_last=now; const dtf=dt/16.67;
+  HP_ensureField();
+  if(HP_phase==="count"&&ms()>=HP_startAt)HP_phase="play";
+  // pellets
+  const pad=HP_PAD;
+  for(const p of HP_pellets){
+    if(p.pop<1)p.pop=Math.min(1,p.pop+dt/220);
+    p.hop+=dt*0.009;
+    if(HP_phase==="play"){
+      p.x+=p.vx*dtf; p.y+=p.vy*dtf;
+      if(p.x<pad){p.x=pad;p.vx=Math.abs(p.vx);} if(p.x>HP_W-pad){p.x=HP_W-pad;p.vx=-Math.abs(p.vx);}
+      if(p.y<pad){p.y=pad;p.vy=Math.abs(p.vy);} if(p.y>HP_H-pad){p.y=HP_H-pad;p.vy=-Math.abs(p.vy);}
+    }
+  }
+  // tracking
+  if(HP_phase==="play"||HP_phase==="count"){
+    HP_track("bottom",HP_mode==="solo"?1:1);
+    HP_track("top",HP_mode==="solo"?HP_DIFF[HP_diff].track:1);
+  }
+  // bot
+  if(HP_mode==="solo"&&HP_phase==="play"){
+    const cfg=HP_DIFF[HP_diff], b=HP_hip.top, f=HP_focus("top");
+    let best=null,bd=1e9;
+    for(const p of HP_pellets){ if(p.side!=="top")continue; const d=Math.hypot(p.x-f.x,p.y-f.y); if(d<bd){bd=d;best=p;} }
+    if(best&&bd<HP_GRAB*cfg.range&&ms()-b.chompAt>cfg.cd){
+      if(Math.random()<cfg.prob)HP_chomp("top");
+      else b.chompAt=ms()-cfg.cd+220;   // brief hesitation
+    }
+  }
+  HP_draw(ms());
+  if(HP_phase==="play"&&ms()>=HP_endAt){HP_end();return;}
+  HP_raf=requestAnimationFrame(HP_loop);
+}
+function HP_end(){
+  HP_phase="over";
+  const b=HP_hip.bottom.score, t=HP_hip.top.score;
+  HP_winner=b===t?null:(b>t?"bottom":"top");
+  if(HP_raf){cancelAnimationFrame(HP_raf);HP_raf=null;}
+  render();
+}
+
+// ── screens ──
+function HP_scrSetup(){return `
+<div class="fade" style="padding-top:20px">
+  <button class="btn" id="hp-back" style="background:var(--ca2);color:var(--mu);border:1px solid var(--bd);width:auto;padding:8px 16px;font-size:13px;margin-bottom:22px">← Back</button>
+  <div style="text-align:center;margin-bottom:24px">
+    <div style="font-size:40px">🦛</div>
+    <div class="hf" style="font-size:40px;color:#FF4D8D;letter-spacing:1px;line-height:1;text-shadow:0 0 50px rgba(255,77,141,.4)">HIPPO CHOMP</div>
+    <div style="color:var(--mu);margin-top:8px;font-size:14px">Tap to open your hippo's mouth and gobble <b style="color:#FF4D8D">your</b> colour! 🦛</div>
+  </div>
+  <div class="card" style="margin-bottom:18px">
+    <span class="lbl">🤖 Play vs Bot &nbsp;<span style="color:#FF4D8D">(you're Pink)</span></span>
+    <div class="g2" style="grid-template-columns:1fr 1fr 1fr;margin-top:4px">
+      <button class="btn hp-diff" data-d="easy">😴 Easy</button>
+      <button class="btn hp-diff" data-d="med">💪 Medium</button>
+      <button class="btn hp-diff" data-d="hard">🔥 Hard</button>
+    </div>
+  </div>
+  <div style="text-align:center;color:var(--mu);font-size:11px;letter-spacing:2px;font-weight:900;margin-bottom:14px">— OR —</div>
+  <button class="btn" id="hp-2p" style="background:linear-gradient(135deg,#FF4D8D,#2DD4BF);color:#fff;font-size:17px;padding:16px">👥 2 Players · Same Device</button>
+  <div style="text-align:center;color:var(--mu);font-size:12px;margin-top:12px">Pink taps the bottom, Teal taps the top — most of your colour in 30s wins! 🏆</div>
+</div>`;}
+
+function HP_scrGame(){
+  const two=HP_mode==="2p";
+  const botName=HP_DIFF[HP_diff].nm;
+  const topBtn=two?`<button class="hp-tapbtn teal flip" id="hp-tap-top">🦛 CHOMP!</button>`:
+    `<div style="text-align:center;color:var(--mu);font-size:13px;font-weight:800;padding:6px 0 12px"><span style="color:#2DD4BF">🦛 ${botName}</span> (Teal) is chomping too!</div>`;
+  return `
+<div class="fade" style="padding-top:12px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
+    <button class="btn" id="hp-back" style="background:var(--ca2);color:var(--mu);border:1px solid var(--bd);width:auto;padding:7px 13px;font-size:12px">← Quit</button>
+    <div style="font-weight:900;color:var(--mu);font-size:13px">${two?"Pink vs Teal · 30s":"You (Pink) vs "+botName}</div>
+  </div>
+  ${topBtn}
+  <div id="hp-arena">
+    <canvas id="hp-cv"></canvas>
+    <div class="hp-half top" id="hp-half-top"></div>
+    <div class="hp-half bottom" id="hp-half-bot"></div>
+  </div>
+  <button class="hp-tapbtn pink" id="hp-tap-bot">🦛 CHOMP!</button>
+</div>`;}
+
+function HP_scrOver(){
+  const b=HP_hip.bottom.score, t=HP_hip.top.score, two=HP_mode==="2p";
+  let title,col,emoji;
+  if(HP_winner===null){title="IT'S A TIE!";col="var(--te)";emoji="🤝";}
+  else if(HP_winner==="bottom"){title=two?"PINK WINS!":"YOU WIN!";col="#FF4D8D";emoji="🏆";}
+  else{title=two?"TEAL WINS!":(HP_DIFF[HP_diff].nm+" WINS!");col="#2DD4BF";emoji=two?"🏆":"😤";}
+  const iWon=!two&&HP_winner==="bottom";
+  setTimeout(()=>{try{playSfx(iWon?"win":"fool");}catch(e){} if(iWon)zzWin("hippo-"+HP_diff,true);},180);
+  return `
+<div class="fade" style="padding-top:40px;text-align:center">
+  <div style="font-size:64px;margin-bottom:6px">${emoji}</div>
+  <div class="hf" style="font-size:36px;color:${col};text-shadow:0 0 40px ${col}55">${title}</div>
+  <div style="display:flex;justify-content:center;gap:26px;margin-top:18px;font-weight:900">
+    <div><div style="color:#FF4D8D;font-size:14px">${two?"PINK":"YOU"}</div><div class="hf" style="font-size:44px;color:#FF4D8D">${b}</div></div>
+    <div style="align-self:center;color:var(--mu)">—</div>
+    <div><div style="color:#2DD4BF;font-size:14px">${two?"TEAL":HP_DIFF[HP_diff].nm}</div><div class="hf" style="font-size:44px;color:#2DD4BF">${t}</div></div>
+  </div>
+  <div style="margin-top:30px">
+    <button class="btn" id="hp-again" style="background:#FF4D8D;color:#fff;font-size:17px;padding:15px;margin-bottom:12px">🔁 Play Again</button>
+    <button class="btn" id="hp-menu" style="background:var(--ca2);color:var(--te);border:1px solid var(--bd);font-size:15px;padding:13px">Change mode</button>
+  </div>
+</div>`;}
+
+// ── entry / lifecycle ──
+function HP_start(mode,diff){
+  HP_teardown();
+  HP_mode=mode; if(diff)HP_diff=diff;
+  HP_pellets=[]; HP_puffs=[]; HP_winner=null;
+  HP_phase="count"; HP_startAt=ms()+HP_COUNTDOWN; HP_endAt=HP_startAt+HP_DUR;
+  render();
+}
+function HP_teardown(){
+  if(HP_raf){cancelAnimationFrame(HP_raf);HP_raf=null;}
+  if(HP_keyHandler){document.removeEventListener("keydown",HP_keyHandler);HP_keyHandler=null;}
+  HP_ctx=null;HP_cv=null;
+}
+function renderHippo(){
+  const app=document.getElementById("app");if(!app)return;
+  if(HP_phase==="setup")app.innerHTML=HP_scrSetup();
+  else if(HP_phase==="over")app.innerHTML=HP_scrOver();
+  else app.innerHTML=HP_scrGame();
+  bindHippo();
+}
+function bindHippo(){
+  const $=id=>document.getElementById(id),on=(id,fn)=>{const el=$(id);if(el)el.onclick=fn;};
+  on("hp-back",()=>{HP_teardown();HP_phase="setup";currentGame=null;gs=null;render();});
+  on("hp-menu",()=>{HP_teardown();HP_phase="setup";render();});
+  on("hp-again",()=>HP_start(HP_mode,HP_diff));
+  document.querySelectorAll(".hp-diff").forEach(bt=>bt.onclick=()=>HP_start("solo",bt.getAttribute("data-d")));
+  on("hp-2p",()=>HP_start("2p"));
+
+  const cv=$("hp-cv");
+  if(cv){
+    HP_cv=cv;
+    const arena=$("hp-arena");
+    HP_W=Math.round(arena.clientWidth||340);
+    HP_H=Math.round(Math.min(360,Math.max(280,HP_W*0.92)));
+    HP_dpr=Math.min(2,window.devicePixelRatio||1);
+    cv.width=HP_W*HP_dpr;cv.height=HP_H*HP_dpr;
+    cv.style.height=HP_H+"px";
+    HP_ctx=cv.getContext("2d");
+    HP_ctx.setTransform(HP_dpr,0,0,HP_dpr,0,0);
+    if(!HP_ctx.roundRect)HP_ctx.roundRect=function(x,y,w,h,r){this.moveTo(x+r,y);this.arcTo(x+w,y,x+w,y+h,r);this.arcTo(x+w,y+h,x,y+h,r);this.arcTo(x,y+h,x,y,r);this.arcTo(x,y,x+w,y,r);return this;};
+    HP_hip=HP_newHip();
+    HP_ensureField();
+    const two=HP_mode==="2p";
+    const tapBot=e=>{e.preventDefault();HP_chomp("bottom");};
+    const tapTop=e=>{e.preventDefault();HP_chomp("top");};
+    const bb=$("hp-tap-bot");if(bb)bb.onpointerdown=tapBot;
+    const tb=$("hp-tap-top");if(tb)tb.onpointerdown=tapTop;
+    if(two){
+      const ht=$("hp-half-top"),hb=$("hp-half-bot");
+      if(ht)ht.onpointerdown=tapTop; if(hb)hb.onpointerdown=tapBot;
+    }else{
+      arena.onpointerdown=tapBot;
+      HP_keyHandler=e=>{if(e.code==="Space"||e.key===" "){e.preventDefault();HP_chomp("bottom");}};
+      document.addEventListener("keydown",HP_keyHandler);
+    }
+    if(HP_raf)cancelAnimationFrame(HP_raf);
+    HP_last=performance.now();HP_raf=requestAnimationFrame(HP_loop);
+  }else if(HP_raf){cancelAnimationFrame(HP_raf);HP_raf=null;}
+}
+
+// ═══════════════════════════════════════════════════════
 // HOME SCREEN
 // ═══════════════════════════════════════════════════════
 function scrHome(){
@@ -4183,6 +4557,7 @@ function scrHome(){
     {t:"CABO",              c:"#00E096", i:"🎴", b:"Memory Cards", m:"👥 2–8",        d:"Peek, draw, swap and use card powers to shrink your total — and remember everyone's cards. Call \"Cabo\" when you're lowest.", go:"currentGame='cabo';render();"},
     {t:"EXPLODING KITTENS", c:"#FF6F91", i:"🙀", b:"Solo & Rooms", m:"👤 Solo · 👥 2–5", d:"Draw cards… just don't draw a kitten 🙀 Use Skips, Attacks, Favors and Nopes to survive. Last cat standing wins.", go:"currentGame='ek';render();"},
     {t:"SUMO SMASH",        c:"#38BDF8", i:"🤼", b:"Tap Battle",   m:"👤 Solo · 👥 1v1", d:"A frantic tap battle 💥 Mash as fast as you can to shove your rival out of the ring. Play a bot or a friend — best of 3 wins.", go:"currentGame='sumo';render();"},
+    {t:"HIPPO CHOMP",       c:"#FF4D8D", i:"🦛", b:"Tap & Gobble",  m:"👤 Solo · 👥 2P",  d:"Two hungry hippos, two colours 🦛 Tap to snap your hippo's mouth shut on the pellets of YOUR colour. Whoever gobbles the most in 30s wins.", go:"currentGame='hippo';render();"},
     {t:"PICTIONARY",        c:"#06B6D4", i:"🎨", b:"Draw & Guess", m:"👥 2–8",        d:"One player draws, everyone guesses in real time. First correct guess wins — bad drawings are funnier anyway.", go:"currentGame='draw';render();"},
     {t:"TYPE",              c:"#e2b714", i:"⌨️", b:"Solo & Race", m:"👤 Solo · 👥 2–8", d:"A clean typing speed test. Play solo to measure your WPM and accuracy, or race friends on the same words live.", go:"currentGame='type';TYPE_view='menu';render();"},
     {t:"BASKETBALL",        c:"#E8622C", i:"🏀", b:"Solo Arcade", m:"👤 Solo",       d:"Drag to aim, release to shoot 🏀 Sink it from a brand-new spot every score. Chase your best streak, unlock 12 ball skins.", href:"hoops/"},
@@ -4242,6 +4617,7 @@ function render(){
   if(currentGame==="cabo") {renderCabo(); return;}
   if(currentGame==="ek")   {renderEK(); return;}
   if(currentGame==="sumo") {renderSumo(); return;}
+  if(currentGame==="hippo"){renderHippo(); return;}
 }
 
 // ═══════════════════════════════════════════════════════
