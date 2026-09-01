@@ -4609,8 +4609,20 @@ let AR_turn=0, AR_scores=[0,0], AR_shotsLeft=AR_ARROWS;
 let AR_hs={score:0,name:""}, AR_localBest=0, AR_recordPending=false;
 let AR_canvas=null, AR_ctx=null, AR_raf=null, AR_last=0, AR_W=340, AR_H=360, AR_dpr=1;
 let AR_ground=0, AR_bow={x:50,y:230}, AR_target={x:250,y:120,r:AR_TR}, AR_wind=0;
-let AR_arrow=null, AR_stuck=[], AR_aiming=false, AR_ptr={x:0,y:0};
+let AR_arrow=null, AR_stuck=[], AR_aiming=false, AR_hasAim=false, AR_ptr={x:0,y:0};
 let AR_msg="", AR_msgAt=0, AR_resultAt=0, AR_advancing=false, AR_clouds=[];
+
+// show the aim preview whenever we're aiming or have a stored aim, and no arrow is live
+function AR_showAim(){ return (AR_aiming||AR_hasAim) && !AR_arrow && AR_phase==="play" && AR_shotsLeft>0; }
+function AR_canShoot(){ return AR_hasAim && !AR_arrow && AR_phase==="play" && AR_shotsLeft>0; }
+// a sensible default aim pointing roughly at the target
+function AR_defaultAim(){
+  // aim straight at the target with a bit of extra lift for the arc
+  const dx=AR_target.x-AR_bow.x, dy=(AR_target.y-AR_bow.y)-Math.hypot(AR_target.x-AR_bow.x,AR_target.y-AR_bow.y)*0.25, m=Math.hypot(dx,dy)||1;
+  const pull=Math.min(AR_MAXPULL, m*0.62);
+  AR_ptr={x:AR_bow.x+dx/m*pull, y:AR_bow.y+dy/m*pull};   // drag TOWARD the target
+  AR_hasAim=true;
+}
 
 function AR_sfx(kind){try{const c=new(window.AudioContext||window.webkitAudioContext)();const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);const t=c.currentTime;
   if(kind==="shot"){o.type="triangle";o.frequency.setValueAtTime(600,t);o.frequency.exponentialRampToValueAtTime(180,t+.12);}
@@ -4625,22 +4637,23 @@ function AR_band(d){ // distance from centre → points
   if(d<=r*0.2)return 10; if(d<=r*0.4)return 8; if(d<=r*0.6)return 6; if(d<=r*0.8)return 4; if(d<=r)return 2; return 0;
 }
 function AR_newShot(){
-  AR_arrow=null; AR_advancing=false;
+  AR_arrow=null; AR_advancing=false; AR_aiming=false;
   const pad=46;
   AR_target.x = AR_W*0.55 + Math.random()*(AR_W*0.42 - pad);
   AR_target.y = 54 + Math.random()*(AR_ground-120);
   AR_target.r = AR_TR;
   AR_wind = (Math.random()*2-1)*0.12;
+  AR_defaultAim();
 }
 function AR_fire(){
-  if(AR_arrow||AR_shotsLeft<=0||AR_phase!=="play")return;
-  let dx=AR_bow.x-AR_ptr.x, dy=AR_bow.y-AR_ptr.y;
+  if(AR_arrow||AR_shotsLeft<=0||AR_phase!=="play"||!AR_hasAim)return;
+  let dx=AR_ptr.x-AR_bow.x, dy=AR_ptr.y-AR_bow.y;   // shoot TOWARD the drag
   const mag=Math.hypot(dx,dy);
   if(mag<12)return;                          // too small a pull, ignore
   const cl=Math.min(AR_MAXPULL,mag)/ (mag||1);
   dx*=cl; dy*=cl;
   AR_arrow={x:AR_bow.x,y:AR_bow.y,vx:dx*AR_SPEEDK,vy:dy*AR_SPEEDK,ang:Math.atan2(dy,dx),stuck:false};
-  AR_shotsLeft--; AR_sfx("shot");
+  AR_hasAim=false; AR_aiming=false; AR_shotsLeft--; AR_sfx("shot");
 }
 function AR_resolve(pts,x,y,ang){
   AR_arrow.stuck=true; AR_arrow.x=x; AR_arrow.y=y; AR_arrow.ang=ang;
@@ -4751,22 +4764,29 @@ function AR_drawArrow(x,y,ang,alpha){
 }
 function AR_drawBow(){
   const c=AR_ctx, b=AR_bow;
-  let sx=b.x, sy=b.y;                      // string nock point
-  if(AR_aiming){ sx=AR_ptr.x; sy=AR_ptr.y; const dx=b.x-sx,dy=b.y-sy,m=Math.hypot(dx,dy);
-    if(m>AR_MAXPULL){ sx=b.x-dx/m*AR_MAXPULL; sy=b.y-dy/m*AR_MAXPULL; } }
-  // bow arc
-  c.strokeStyle="#6b3f1d"; c.lineWidth=5; c.beginPath(); c.arc(b.x,b.y,22,-Math.PI*0.62,Math.PI*0.62); c.stroke();
-  // string
+  let sx=b.x, sy=b.y, ang=0;               // string nock point + aim angle
+  if(AR_showAim()){
+    let dx=AR_ptr.x-b.x, dy=AR_ptr.y-b.y; const m=Math.hypot(dx,dy)||1;
+    ang=Math.atan2(dy,dx);
+    const pull=Math.min(AR_MAXPULL,m);
+    sx=b.x-dx/m*Math.min(30,pull*0.32);    // nock pulled BACK from launch dir
+    sy=b.y-dy/m*Math.min(30,pull*0.32);
+  }
+  // bow arc, oriented to the aim
+  c.save(); c.translate(b.x,b.y); c.rotate(ang);
+  c.strokeStyle="#6b3f1d"; c.lineWidth=6; c.beginPath(); c.arc(0,0,28,-Math.PI*0.62,Math.PI*0.62); c.stroke();
+  c.restore();
+  // string from bow tips to the nock
+  const top={x:b.x+Math.cos(ang-Math.PI*0.62)*28,y:b.y+Math.sin(ang-Math.PI*0.62)*28};
+  const bot={x:b.x+Math.cos(ang+Math.PI*0.62)*28,y:b.y+Math.sin(ang+Math.PI*0.62)*28};
   c.strokeStyle="rgba(255,255,255,.85)"; c.lineWidth=1.6;
-  const top={x:b.x+Math.cos(-Math.PI*0.62)*22,y:b.y+Math.sin(-Math.PI*0.62)*22};
-  const bot={x:b.x+Math.cos(Math.PI*0.62)*22,y:b.y+Math.sin(Math.PI*0.62)*22};
   c.beginPath(); c.moveTo(top.x,top.y); c.lineTo(sx,sy); c.lineTo(bot.x,bot.y); c.stroke();
-  // nocked arrow while aiming
-  if(AR_aiming && !AR_arrow){ AR_drawArrow(sx,sy,Math.atan2(b.y-sy,b.x-sx),1); }
+  // nocked arrow pointing toward the aim
+  if(AR_showAim()){ AR_drawArrow(b.x,b.y,ang,1); }
 }
 function AR_predict(){
-  // simulate the shot from the current pull; return points
-  let dx=AR_bow.x-AR_ptr.x, dy=AR_bow.y-AR_ptr.y; const mag=Math.hypot(dx,dy);
+  // simulate the shot toward the current aim; return points
+  let dx=AR_ptr.x-AR_bow.x, dy=AR_ptr.y-AR_bow.y; const mag=Math.hypot(dx,dy);
   if(mag<12)return [];
   const cl=Math.min(AR_MAXPULL,mag)/(mag||1); dx*=cl; dy*=cl;
   let x=AR_bow.x,y=AR_bow.y,vx=dx*AR_SPEEDK,vy=dy*AR_SPEEDK; const pts=[];
@@ -4775,13 +4795,26 @@ function AR_predict(){
   return pts;
 }
 function AR_drawAimAid(){
-  if(!AR_aiming||AR_arrow)return;
-  const pts=AR_predict(); if(!pts.length)return;
+  if(!AR_showAim())return;
+  const pts=AR_predict(); if(pts.length<2)return;
   const c=AR_ctx; c.save();
-  const show = AR_aim==="guided" ? pts.length : Math.min(pts.length,5);
-  const step = AR_aim==="guided" ? 4 : 3;
-  for(let i=0;i<show;i+=step){ const p=pts[i]; const a=AR_aim==="guided"?(1-i/pts.length)*0.9:0.8;
-    c.fillStyle="rgba(255,255,255,"+a+")"; c.beginPath(); c.arc(p.x,p.y, AR_aim==="guided"?2.6:3, 0,6.28); c.fill(); }
+  if(AR_aim==="guided"){
+    // full trajectory as a clear dashed arc + a landing marker
+    c.setLineDash([7,8]); c.lineWidth=3.5; c.strokeStyle="rgba(255,255,255,.92)";
+    c.beginPath(); c.moveTo(pts[0].x,pts[0].y);
+    for(let i=1;i<pts.length;i++)c.lineTo(pts[i].x,pts[i].y);
+    c.stroke(); c.setLineDash([]);
+    const last=pts[pts.length-1];
+    c.beginPath(); c.arc(last.x,last.y,6,0,6.28); c.fillStyle="rgba(255,210,63,.95)"; c.fill();
+    c.lineWidth=1.6; c.strokeStyle="rgba(120,80,0,.75)"; c.stroke();
+  }else{
+    // Pro: barely a hint — a short stub in the launch direction only
+    const n=Math.min(pts.length,4);
+    c.setLineDash([4,6]); c.lineWidth=3; c.strokeStyle="rgba(255,255,255,.55)";
+    c.beginPath(); c.moveTo(pts[0].x,pts[0].y);
+    for(let i=1;i<n;i++)c.lineTo(pts[i].x,pts[i].y);
+    c.stroke(); c.setLineDash([]);
+  }
   c.restore();
 }
 function AR_windFlag(){
@@ -4850,9 +4883,10 @@ function AR_scrGame(){
     <div style="font-weight:900;color:var(--mu);font-size:13px">${AR_mode==="2p"?AR_who()+"'s turn":"Solo"} · ${AR_aim==="guided"?"Guided":"Pro"}</div>
   </div>
   <div id="ar-arena" style="border-radius:22px;overflow:hidden;line-height:0;box-shadow:0 10px 30px rgba(0,0,0,.4)">
-    <canvas id="ar-cv" style="display:block;width:100%"></canvas>
+    <canvas id="ar-cv" style="display:block;width:100%;touch-action:none"></canvas>
   </div>
-  <div style="text-align:center;color:var(--mu);font-size:12px;margin-top:8px">Drag <b>back</b> from the bow to aim & set power — release to shoot 🏹</div>
+  <button class="btn" id="ar-shoot" style="background:linear-gradient(135deg,#35A7FF,#5BC0FF);color:#03253d;font-size:19px;font-weight:900;padding:17px;margin-top:10px;box-shadow:0 6px 0 #1b6ea3">🏹 SHOOT!</button>
+  <div style="text-align:center;color:var(--mu);font-size:12px;margin-top:8px"><b>Drag</b> anywhere to aim & set power, then tap <b>SHOOT</b> 🎯</div>
 </div>`;}
 
 function AR_scrPass(){
@@ -4931,6 +4965,7 @@ function bindArchery(){
   on("ar-again",()=>AR_start(AR_mode));
   on("ar-menu",()=>{ AR_teardown(); AR_phase="setup"; render(); });
   on("ar-save",()=>{ AR_saveRecord($("ar-name")?.value.trim()); });
+  on("ar-shoot",()=>{ AR_fire(); });
   if(AR_phase==="setup"){ AR_loadHigh(); }
 
   const cv=$("ar-cv");
@@ -4938,18 +4973,21 @@ function bindArchery(){
     AR_canvas=cv;
     const arena=$("ar-arena");
     AR_W=Math.round(arena.clientWidth||340);
-    AR_H=Math.round(Math.min(400,Math.max(300,AR_W*1.02)));
+    const vh=window.innerHeight||700;
+    AR_H=Math.round(Math.max(420,Math.min(AR_W*1.4, vh*0.64)));
     AR_dpr=Math.min(2,window.devicePixelRatio||1);
     cv.width=AR_W*AR_dpr; cv.height=AR_H*AR_dpr; cv.style.height=AR_H+"px";
     AR_ctx=cv.getContext("2d"); AR_ctx.setTransform(AR_dpr,0,0,AR_dpr,0,0);
     if(!AR_ctx.roundRect)AR_ctx.roundRect=function(x,y,w,h,r){this.moveTo(x+r,y);this.arcTo(x+w,y,x+w,y+h,r);this.arcTo(x+w,y+h,x,y+h,r);this.arcTo(x,y+h,x,y,r);this.arcTo(x,y,x+w,y,r);return this;};
-    AR_ground=AR_H-46; AR_bow={x:46,y:AR_ground-70};
-    AR_clouds=[{x:AR_W*0.3,y:60,s:15,v:0.15},{x:AR_W*0.7,y:100,s:11,v:0.1},{x:AR_W*0.5,y:38,s:9,v:0.2}];
-    if(!AR_stuck.length && AR_arrow===null) AR_newShot();
+    AR_ground=AR_H-46; AR_bow={x:48,y:AR_ground-78};
+    AR_clouds=[{x:AR_W*0.3,y:60,s:16,v:0.15},{x:AR_W*0.7,y:104,s:12,v:0.1},{x:AR_W*0.5,y:40,s:10,v:0.2}];
+    if(!AR_stuck.length && AR_arrow===null){ AR_newShot(); } else if(!AR_arrow && AR_shotsLeft>0){ AR_defaultAim(); }
     const pos=e=>{const r=cv.getBoundingClientRect(); return {x:(e.clientX-r.left), y:(e.clientY-r.top)};};
-    cv.onpointerdown=e=>{ e.preventDefault(); if(AR_arrow||AR_shotsLeft<=0||AR_phase!=="play")return; AR_aiming=true; AR_ptr=pos(e); try{cv.setPointerCapture(e.pointerId);}catch(_){} };
-    cv.onpointermove=e=>{ if(!AR_aiming)return; e.preventDefault(); AR_ptr=pos(e); };
-    const release=e=>{ if(!AR_aiming)return; AR_aiming=false; AR_ptr=pos(e); AR_fire(); };
+    // Drag to AIM (angle + power). Releasing does NOT fire — the aim is kept
+    // on screen so you can tweak it; the SHOOT button looses the arrow.
+    cv.onpointerdown=e=>{ e.preventDefault(); if(AR_arrow||AR_shotsLeft<=0||AR_phase!=="play")return; AR_aiming=true; AR_hasAim=true; AR_ptr=pos(e); try{cv.setPointerCapture(e.pointerId);}catch(_){} };
+    cv.onpointermove=e=>{ if(!AR_aiming)return; e.preventDefault(); AR_ptr=pos(e); AR_hasAim=true; };
+    const release=e=>{ if(!AR_aiming)return; AR_aiming=false; AR_ptr=pos(e); AR_hasAim=true; };
     cv.onpointerup=release; cv.onpointercancel=release;
     if(AR_raf)cancelAnimationFrame(AR_raf);
     AR_last=performance.now(); AR_raf=requestAnimationFrame(AR_loop);
@@ -4968,7 +5006,7 @@ function scrHome(){
     {t:"EXPLODING KITTENS", c:"#FF6F91", i:"🙀", b:"Solo & Rooms", m:"👤 Solo · 👥 2–5", d:"Draw cards… just don't draw a kitten 🙀 Use Skips, Attacks, Favors and Nopes to survive. Last cat standing wins.", go:"currentGame='ek';render();"},
     {t:"SUMO SMASH",        c:"#38BDF8", i:"🤼", b:"Tap Battle",   m:"👤 Solo · 👥 1v1", d:"A frantic tap battle 💥 Mash as fast as you can to shove your rival out of the ring. Play a bot or a friend — best of 3 wins.", go:"currentGame='sumo';render();"},
     {t:"HIPPO CHOMP",       c:"#FF4D8D", i:"🦛", b:"Tap & Gobble",  m:"👤 Solo · 👥 2P",  d:"Two hungry hippos, two colours 🦛 Tap to snap your mouth shut on pellets of YOUR colour — but grab the wrong colour and it's -1! Highest score in 30s wins.", go:"currentGame='hippo';render();"},
-    {t:"ARCHERY",           c:"#35A7FF", i:"🏹", b:"Aim & Shoot",   m:"👤 Solo · 👥 2P",  d:"Drag back the bow, judge the wind and loose your arrow at the target 🎯 Guided mode shows the full arc, Pro mode barely a hint. Beat the platform high score or duel a friend.", go:"currentGame='archery';render();"},
+    {t:"ARCHERY",           c:"#35A7FF", i:"🏹", b:"Aim & Shoot",   m:"👤 Solo · 👥 2P",  d:"Drag to aim, judge the wind and tap SHOOT to loose your arrow at the target 🎯 Guided mode shows the full arc, Pro mode barely a hint. Beat the platform high score or duel a friend.", go:"currentGame='archery';render();"},
     {t:"PICTIONARY",        c:"#06B6D4", i:"🎨", b:"Draw & Guess", m:"👥 2–8",        d:"One player draws, everyone guesses in real time. First correct guess wins — bad drawings are funnier anyway.", go:"currentGame='draw';render();"},
     {t:"TYPE",              c:"#e2b714", i:"⌨️", b:"Solo & Race", m:"👤 Solo · 👥 2–8", d:"A clean typing speed test. Play solo to measure your WPM and accuracy, or race friends on the same words live.", go:"currentGame='type';TYPE_view='menu';render();"},
     {t:"BASKETBALL",        c:"#E8622C", i:"🏀", b:"Solo Arcade", m:"👤 Solo",       d:"Drag to aim, release to shoot 🏀 Sink it from a brand-new spot every score. Chase your best streak, unlock 12 ball skins.", href:"hoops/"},
