@@ -775,7 +775,7 @@ function B_scrFinished(){
   const s=[...gs.players].sort((a,b)=>b.score-a.score);
   const top=s[0]?.score??0;const winners=s.filter(p=>p.score===top);const isTie=winners.length>1;
   setTimeout(()=>{const iWon=gs.players.find(p=>p.id===myId)?.score===top;try{playSfx(iWon?'win':'fool');}catch(e){}if(!isTie||iWon)zzWin(currentGame+'-fin-'+roomCode,iWon);},250);
-  return`<div class="fade" style="padding-top:24px"><div style="text-align:center;margin-bottom:24px"><div class="hf" style="font-size:44px;color:var(--y)">Game Over!</div>${isTie?`<div style="font-size:44px;margin:10px 0 4px">🤝</div><div class="hf" style="font-size:24px;color:var(--gr)">It's a tie! ${winners.map(w=>`${w.av} ${w.name}`).join(" & ")}</div>`:`<div style="font-size:48px;margin:10px 0 4px">${s[0].av}</div><div class="hf" style="font-size:24px;color:var(--gr)">${s[0].name} wins! 🏆</div>`}</div><div class="card" style="margin-bottom:16px"><span class="lbl">Final Standings</span>${s.map((p,i)=>`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;${i<s.length-1?"border-bottom:1px solid var(--bd)":""}"><span style="font-size:18px;width:28px;text-align:center">${(!isTie&&i===0)?"🥇":(!isTie&&i===1)?"🥈":(!isTie&&i===2)?"🥉":`${i+1}.`}</span><span style="font-size:22px">${p.av}</span><span style="font-weight:800;flex:1;font-size:14px;color:${p.id===myId?"var(--cy)":"var(--te)"}">${p.name}${p.id===myId?" (you)":""}</span><span class="hf" style="font-size:24px;color:${(!isTie&&i===0)?"var(--y)":"var(--te)"}">${p.score}</span></div>`).join("")}</div>${isHost?`<button class="btn" id="rmbtn" style="background:var(--gr);color:#000;font-size:16px;padding:14px">🔁 Rematch</button>`:""}</div>`;}
+  return`<div class="fade" style="padding-top:24px">${ZZ_HOMEBTN}<div style="text-align:center;margin-bottom:24px"><div class="hf" style="font-size:44px;color:var(--y)">Game Over!</div>${isTie?`<div style="font-size:44px;margin:10px 0 4px">🤝</div><div class="hf" style="font-size:24px;color:var(--gr)">It's a tie! ${winners.map(w=>`${w.av} ${w.name}`).join(" & ")}</div>`:`<div style="font-size:48px;margin:10px 0 4px">${s[0].av}</div><div class="hf" style="font-size:24px;color:var(--gr)">${s[0].name} wins! 🏆</div>`}</div><div class="card" style="margin-bottom:16px"><span class="lbl">Final Standings</span>${s.map((p,i)=>`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;${i<s.length-1?"border-bottom:1px solid var(--bd)":""}"><span style="font-size:18px;width:28px;text-align:center">${(!isTie&&i===0)?"🥇":(!isTie&&i===1)?"🥈":(!isTie&&i===2)?"🥉":`${i+1}.`}</span><span style="font-size:22px">${p.av}</span><span style="font-weight:800;flex:1;font-size:14px;color:${p.id===myId?"var(--cy)":"var(--te)"}">${p.name}${p.id===myId?" (you)":""}</span><span class="hf" style="font-size:24px;color:${(!isTie&&i===0)?"var(--y)":"var(--te)"}">${p.score}</span></div>`).join("")}</div>${isHost?`<button class="btn" id="rmbtn" style="background:var(--gr);color:#000;font-size:16px;padding:14px">🔁 Rematch</button>`:""}</div>`;}
 
 let B_screenSig=null;
 
@@ -1246,7 +1246,7 @@ function P_scrFinished(){
   const s=[...gs.players].sort((a,b)=>b.score-a.score);
   const top=s[0]?.score??0;const winners=s.filter(p=>p.score===top);const isTie=winners.length>1;
   setTimeout(()=>{const iWon=gs.players.find(p=>p.id===myId)?.score===top;try{playSfx(iWon?'win':'fool');}catch(e){}if(!isTie||iWon)zzWin(currentGame+'-fin-'+roomCode,iWon);},250);
-  return`<div class="fade" style="padding-top:24px"><div style="text-align:center;margin-bottom:28px"><div class="hf" style="font-size:44px;color:var(--pu);text-shadow:0 0 40px #A855F755">Game Over!</div>${isTie?`<div style="font-size:44px;margin:12px 0 4px">🤝</div><div class="hf" style="font-size:24px;color:var(--gr)">It's a tie!</div>`:`<div style="font-size:52px;margin:12px 0 4px">${s[0].av}</div><div class="hf" style="font-size:26px;color:var(--gr)">${s[0].name} wins! 🏆</div><div style="color:var(--mu);font-size:13px;margin-top:4px">with ${s[0].score} points</div>`}</div><div class="card" style="margin-bottom:20px"><span class="lbl">Final Standings</span>${s.map((p,i)=>`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;${i<s.length-1?"border-bottom:1px solid var(--bd)":""}"><span style="font-size:18px;width:28px;text-align:center">${(!isTie&&i===0)?"🥇":(!isTie&&i===1)?"🥈":(!isTie&&i===2)?"🥉":`${i+1}.`}</span><span style="font-size:22px">${p.av}</span><span style="font-weight:800;flex:1;font-size:14px;color:${p.id===myId?"var(--cy)":"var(--te)"}">${p.name}${p.id===myId?" (you)":""}</span><span class="hf" style="font-size:24px;color:${(!isTie&&i===0)?"var(--pu)":"var(--te)"}">${p.score}</span></div>`).join("")}</div>${isHost?`<button class="btn" id="rmbtn" style="background:var(--gr);color:#000;font-size:16px;padding:14px">🔁 Play Again</button>`:""}</div>`;}
+  return`<div class="fade" style="padding-top:24px">${ZZ_HOMEBTN}<div style="text-align:center;margin-bottom:28px"><div class="hf" style="font-size:44px;color:var(--pu);text-shadow:0 0 40px #A855F755">Game Over!</div>${isTie?`<div style="font-size:44px;margin:12px 0 4px">🤝</div><div class="hf" style="font-size:24px;color:var(--gr)">It's a tie!</div>`:`<div style="font-size:52px;margin:12px 0 4px">${s[0].av}</div><div class="hf" style="font-size:26px;color:var(--gr)">${s[0].name} wins! 🏆</div><div style="color:var(--mu);font-size:13px;margin-top:4px">with ${s[0].score} points</div>`}</div><div class="card" style="margin-bottom:20px"><span class="lbl">Final Standings</span>${s.map((p,i)=>`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;${i<s.length-1?"border-bottom:1px solid var(--bd)":""}"><span style="font-size:18px;width:28px;text-align:center">${(!isTie&&i===0)?"🥇":(!isTie&&i===1)?"🥈":(!isTie&&i===2)?"🥉":`${i+1}.`}</span><span style="font-size:22px">${p.av}</span><span style="font-weight:800;flex:1;font-size:14px;color:${p.id===myId?"var(--cy)":"var(--te)"}">${p.name}${p.id===myId?" (you)":""}</span><span class="hf" style="font-size:24px;color:${(!isTie&&i===0)?"var(--pu)":"var(--te)"}">${p.score}</span></div>`).join("")}</div>${isHost?`<button class="btn" id="rmbtn" style="background:var(--gr);color:#000;font-size:16px;padding:14px">🔁 Play Again</button>`:""}</div>`;}
 
 let P_screenSig=null;
 
@@ -1744,7 +1744,7 @@ function D_scrFinished(){
   const s=[...gs.players].sort((a,b)=>b.score-a.score);
   const top=s[0]?.score??0; const isTie=s.filter(p=>p.score===top).length>1;
   setTimeout(()=>{const iWon=gs.players.find(p=>p.id===myId)?.score===top;try{playSfx(iWon?'win':'fool');}catch(e){}if(!isTie||iWon)zzWin(currentGame+'-fin-'+roomCode,iWon);},250);
-  return`<div class="fade" style="padding-top:24px"><div style="text-align:center;margin-bottom:28px"><div class="hf" style="font-size:44px;color:#06B6D4;text-shadow:0 0 40px rgba(6,182,212,.5)">Game Over!</div>${isTie?`<div style="font-size:44px;margin:12px 0 4px">🤝</div><div class="hf" style="font-size:24px;color:var(--gr)">It's a tie!</div>`:`<div style="font-size:52px;margin:12px 0 4px">${s[0].av}</div><div class="hf" style="font-size:26px;color:var(--gr)">${s[0].name} wins! 🏆</div><div style="color:var(--mu);font-size:13px;margin-top:4px">with ${s[0].score} points</div>`}</div><div class="card" style="margin-bottom:20px"><span class="lbl">Final Standings</span>${s.map((p,i)=>`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;${i<s.length-1?"border-bottom:1px solid var(--bd)":""}"><span style="font-size:18px;width:28px;text-align:center">${(!isTie&&i===0)?"🥇":(!isTie&&i===1)?"🥈":(!isTie&&i===2)?"🥉":`${i+1}.`}</span><span style="font-size:22px">${p.av}</span><span style="font-weight:800;flex:1;font-size:14px;color:${p.id===myId?"var(--cy)":"var(--te)"}">${p.name}${p.id===myId?" (you)":""}</span><span class="hf" style="font-size:24px;color:${(!isTie&&i===0)?"#06B6D4":"var(--te)"}">${p.score}</span></div>`).join("")}</div>${isHost?`<button class="btn" id="rmbtn" style="background:var(--gr);color:#000;font-size:16px;padding:14px">🔁 Play Again</button>`:""}</div>`;}
+  return`<div class="fade" style="padding-top:24px">${ZZ_HOMEBTN}<div style="text-align:center;margin-bottom:28px"><div class="hf" style="font-size:44px;color:#06B6D4;text-shadow:0 0 40px rgba(6,182,212,.5)">Game Over!</div>${isTie?`<div style="font-size:44px;margin:12px 0 4px">🤝</div><div class="hf" style="font-size:24px;color:var(--gr)">It's a tie!</div>`:`<div style="font-size:52px;margin:12px 0 4px">${s[0].av}</div><div class="hf" style="font-size:26px;color:var(--gr)">${s[0].name} wins! 🏆</div><div style="color:var(--mu);font-size:13px;margin-top:4px">with ${s[0].score} points</div>`}</div><div class="card" style="margin-bottom:20px"><span class="lbl">Final Standings</span>${s.map((p,i)=>`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;${i<s.length-1?"border-bottom:1px solid var(--bd)":""}"><span style="font-size:18px;width:28px;text-align:center">${(!isTie&&i===0)?"🥇":(!isTie&&i===1)?"🥈":(!isTie&&i===2)?"🥉":`${i+1}.`}</span><span style="font-size:22px">${p.av}</span><span style="font-weight:800;flex:1;font-size:14px;color:${p.id===myId?"var(--cy)":"var(--te)"}">${p.name}${p.id===myId?" (you)":""}</span><span class="hf" style="font-size:24px;color:${(!isTie&&i===0)?"#06B6D4":"var(--te)"}">${p.score}</span></div>`).join("")}</div>${isHost?`<button class="btn" id="rmbtn" style="background:var(--gr);color:#000;font-size:16px;padding:14px">🔁 Play Again</button>`:""}</div>`;}
 
 // ── RENDER & BIND ─────────────────────────────────────────────────
 function D_startTimer(){
@@ -2618,7 +2618,7 @@ function TP_renderBoard(){
           <div class="tp-winav">${win.av||"🙂"}</div>
           <div class="tp-winname">${iWon?"YOU WIN!":`${win.name||"?"} WINS!`}</div>
           <div class="tp-winsub">${win.wpm||0} <small>wpm</small> · ${win.acc||0}<small>% acc</small></div>
-        </div>${cta}`;
+        </div>${cta}<div style="text-align:center;margin-top:10px"><button class="btn" onclick="zzHome()" style="background:var(--ca2);color:var(--mu);border:1px solid var(--bd);width:auto;padding:7px 14px;font-size:12px;font-weight:800">🏠 Home</button></div>`;
       const again=document.getElementById("tp-again"); if(again) again.onclick=()=>TP_start();
       if(!TP_celebrated){ TP_celebrated=true; zzFireworks(iWon); try{ playSfx('win'); }catch(e){} }
     } else { eb.innerHTML=""; TP_celebrated=false; zzStopFireworks(); }
@@ -2947,7 +2947,7 @@ function BF_scrFinished(){
   const ranked=[...gs.players].sort((a,b)=>(a.place||99)-(b.place||99));
   const win=ranked[0];
   setTimeout(()=>{const iWon=win&&win.id===myId;try{playSfx(iWon?"win":"fool");}catch(e){}zzWin("bluff-fin-"+roomCode,iWon);},250);
-  return`<div class="fade" style="padding-top:24px"><div style="text-align:center;margin-bottom:26px"><div class="hf" style="font-size:44px;color:var(--pk);text-shadow:0 0 40px rgba(255,61,113,.4)">Game Over!</div><div style="font-size:52px;margin:12px 0 4px">${win?win.av:"🎉"}</div><div class="hf" style="font-size:26px;color:var(--gr)">${win?win.name:"?"} wins! 🏆</div><div style="color:var(--mu);font-size:13px;margin-top:4px">First to empty their hand</div></div><div class="card" style="margin-bottom:20px"><span class="lbl">Final Standings</span>${ranked.map((p,i)=>`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;${i<ranked.length-1?"border-bottom:1px solid var(--bd)":""}"><span style="font-size:18px;width:28px;text-align:center">${["🥇","🥈","🥉"][(p.place||0)-1]||`${p.place}.`}</span><span style="font-size:22px">${p.av}</span><span style="font-weight:800;flex:1;font-size:14px;color:${p.id===myId?"var(--cy)":"var(--te)"}">${p.name}${p.id===myId?" (you)":""}</span></div>`).join("")}</div>${isHost?`<button class="btn" id="bf-rematch" style="background:var(--gr);color:#000;font-size:16px;padding:14px">🔁 Play Again</button>`:`<div style="text-align:center;color:var(--mu);font-size:14px;padding:10px"><span class="blink">⏳</span> Waiting for host to restart…</div>`}</div>`;
+  return`<div class="fade" style="padding-top:24px">${ZZ_HOMEBTN}<div style="text-align:center;margin-bottom:26px"><div class="hf" style="font-size:44px;color:var(--pk);text-shadow:0 0 40px rgba(255,61,113,.4)">Game Over!</div><div style="font-size:52px;margin:12px 0 4px">${win?win.av:"🎉"}</div><div class="hf" style="font-size:26px;color:var(--gr)">${win?win.name:"?"} wins! 🏆</div><div style="color:var(--mu);font-size:13px;margin-top:4px">First to empty their hand</div></div><div class="card" style="margin-bottom:20px"><span class="lbl">Final Standings</span>${ranked.map((p,i)=>`<div style="display:flex;align-items:center;gap:12px;padding:12px 0;${i<ranked.length-1?"border-bottom:1px solid var(--bd)":""}"><span style="font-size:18px;width:28px;text-align:center">${["🥇","🥈","🥉"][(p.place||0)-1]||`${p.place}.`}</span><span style="font-size:22px">${p.av}</span><span style="font-weight:800;flex:1;font-size:14px;color:${p.id===myId?"var(--cy)":"var(--te)"}">${p.name}${p.id===myId?" (you)":""}</span></div>`).join("")}</div>${isHost?`<button class="btn" id="bf-rematch" style="background:var(--gr);color:#000;font-size:16px;padding:14px">🔁 Play Again</button>`:`<div style="text-align:center;color:var(--mu);font-size:14px;padding:10px"><span class="blink">⏳</span> Waiting for host to restart…</div>`}</div>`;
 }
 
 function BF_startDisplay(){
@@ -3365,7 +3365,7 @@ function CB_scrReveal(){
     const cards=p.hand.map(c=>`<div class="cb-card" style="width:32px;height:44px;font-size:14px">${c.rank}</div>`).join("");
     return`<div style="display:flex;align-items:center;gap:10px;padding:10px 0;${i<ranked.length-1?"border-bottom:1px solid var(--bd)":""}"><span style="width:24px;text-align:center;font-size:16px">${["🥇","🥈","🥉"][i]||(i+1)+"."}</span><span style="font-size:20px">${p.av}</span><div style="flex:1"><div style="font-weight:800;font-size:14px;color:${p.id===myId?"var(--cy)":"var(--te)"}">${p.name}${p.id===gs.caboBy?" 🔔":""}${p.penalty>0?` <span style="color:var(--pk);font-size:11px;font-weight:800">+${p.penalty} penalty</span>`:""}</div><div class="cb-cards" style="margin-top:4px">${cards}</div></div><span class="hf" style="font-size:22px;color:${i===0?CB_GR:"var(--te)"}">${totals[p.id]}</span></div>`;
   }).join("");
-  return`<div class="fade" style="padding-top:20px">
+  return`<div class="fade" style="padding-top:20px">${ZZ_HOMEBTN}
     <div style="text-align:center;margin-bottom:20px">
       <div class="hf" style="font-size:40px;color:${CB_GR}">${r.winnerAv||""} ${r.winnerName} wins!</div>
       <div style="color:var(--mu);font-size:13px;margin-top:6px">Lowest total takes it</div>
@@ -3778,7 +3778,7 @@ function EK_scrGame(){
 function EK_scrOver(){
   const w=gs.winner?EK_p(gs.winner):null;const iWon=w&&w.id===myId;
   setTimeout(()=>{try{playSfx(iWon?'win':'fool');}catch(e){}zzWin('ek-'+roomCode,iWon);},250);
-  return`<div class="fade" style="padding-top:30px;text-align:center">
+  return`<div class="fade" style="padding-top:30px;text-align:center">${ZZ_HOMEBTN}
     <div class="hf" style="font-size:42px;color:${EK_C}">${iWon?'😻 You win!':(w?w.av+' '+w.name+' wins':'Game over')}</div>
     <div style="font-size:70px;margin:14px 0">${iWon?'🏆':(w?w.av:'🐾')}</div>
     <div style="color:var(--mu);font-size:14px;margin-bottom:24px">Last cat standing survives the pile 🐈</div>
@@ -3953,7 +3953,7 @@ function SM_scrOver(){
   const wp=gs.players[win];
   setTimeout(()=>{try{playSfx(iWon?'win':'fool');}catch(e){}if(iWon)zzWin('sumo-fin-'+(roomCode||SM_diff),true);},200);
   return `
-<div class="fade" style="padding-top:40px;text-align:center">
+<div class="fade" style="padding-top:40px;text-align:center">${ZZ_HOMEBTN}
   <div style="font-size:64px;margin-bottom:6px">${iWon?"🏆":"😤"}</div>
   <div class="hf" style="font-size:34px;color:${win===0?"#38BDF8":"#FB7185"};text-shadow:0 0 40px rgba(56,189,248,.3)">${iWon?"YOU WIN!":wp.name+" WINS!"}</div>
   <div style="color:var(--mu);font-weight:800;margin-top:8px;font-size:15px">${gs.players[0].name} ${gs.players[0].score} — ${gs.players[1].score} ${gs.players[1].name}</div>
@@ -4494,7 +4494,7 @@ function HP_scrOver(){
   const iWon=!two&&HP_winner==="bottom";
   setTimeout(()=>{try{playSfx(iWon?"win":"fool");}catch(e){} if(iWon)zzWin("hippo-"+HP_diff,true);},180);
   return `
-<div class="fade" style="padding-top:40px;text-align:center">
+<div class="fade" style="padding-top:40px;text-align:center">${ZZ_HOMEBTN}
   <div style="font-size:64px;margin-bottom:6px">${emoji}</div>
   <div class="hf" style="font-size:36px;color:${col};text-shadow:0 0 40px ${col}55">${title}</div>
   <div style="display:flex;justify-content:center;gap:26px;margin-top:18px;font-weight:900">
@@ -4624,6 +4624,27 @@ function syncLocal(){
     if(gs.round!==D_lastRound){D_hasGuessed=false;D_lastRound=gs.round;}
   }
 }
+
+// Universal "back to the ZipZap home screen" — safely tears down
+// whatever game is running (timers, listeners, canvases) then renders home.
+function zzHome(){
+  try{ if(currentGame==="type" && typeof TP_leave==="function") TP_leave(false); }catch(e){}
+  try{ if(typeof SM_teardown==="function") SM_teardown(); }catch(e){}
+  try{ if(typeof HP_teardown==="function") HP_teardown(); }catch(e){}
+  try{ if(typeof HP_phase!=="undefined") HP_phase="setup"; }catch(e){}
+  try{ if(typeof D_stopCanvasSync==="function") D_stopCanvasSync(); }catch(e){}
+  try{ if(typeof EK_closeModal==="function") EK_closeModal(); }catch(e){}
+  try{ document.body.classList.remove("typing-mode"); }catch(e){}
+  currentGame=null; gs=null; roomCode="";
+  try{ if(stateRefListener&&stateCallback) stateRefListener.off("value",stateCallback); }catch(e){}
+  try{ if(statePoller) clearInterval(statePoller); }catch(e){}
+  try{ if(actTimer) clearInterval(actTimer); }catch(e){}
+  try{ if(displayTimer) clearInterval(displayTimer); }catch(e){}
+  try{ if(typeof zzStopFireworks==="function") zzStopFireworks(); }catch(e){}
+  render();
+}
+// Small top-left "Home" button placed on every game's winner / results screen.
+const ZZ_HOMEBTN='<div style="text-align:left;margin-bottom:10px"><button class="btn" onclick="zzHome()" style="background:var(--ca2);color:var(--mu);border:1px solid var(--bd);width:auto;padding:7px 14px;font-size:12px;font-weight:800">🏠 Home</button></div>';
 
 function render(){
   if(!currentGame){
