@@ -4251,11 +4251,12 @@ function HP_focus(side){
   const h=HP_hip[side], dir=side==="bottom"?-1:1;
   return {x:h.x, y:h.baseY+dir*HP_FOCUS};
 }
-function HP_eat(p,side){
-  HP_puffs.push({x:p.x,y:p.y,t:ms(),side});
+function HP_eat(p,good){
+  const side=p.side;
+  HP_puffs.push({x:p.x,y:p.y,t:ms(),side,good});
   const i=HP_pellets.indexOf(p); if(i>=0)HP_pellets.splice(i,1);
   HP_spawnPellet(side,true);
-  HP_sfx(true);
+  HP_sfx(good);
 }
 function HP_chomp(side){
   if(HP_phase!=="play"||!HP_hip)return;
@@ -4264,8 +4265,11 @@ function HP_chomp(side){
   h.chompAt=now;
   const f=HP_focus(side);
   let best=null,bd=1e9;
-  for(const p of HP_pellets){ if(p.side!==side)continue; const d=Math.hypot(p.x-f.x,p.y-f.y); if(d<bd){bd=d;best=p;} }
-  if(best&&bd<=HP_GRAB){ h.score++; HP_eat(best,side); }
+  for(const p of HP_pellets){ const d=Math.hypot(p.x-f.x,p.y-f.y); if(d<bd){bd=d;best=p;} }
+  if(best&&bd<=HP_GRAB){
+    if(best.side===side){ h.score++; HP_eat(best,true); }      // your colour → +1
+    else{ h.score--; HP_eat(best,false); }                      // wrong colour → -1
+  }
   else{ try{playSfx();}catch(e){} }
 }
 function HP_openOf(h,now){
@@ -4351,9 +4355,9 @@ function HP_drawPuffs(now){
   const c=HP_ctx;
   HP_puffs=HP_puffs.filter(p=>now-p.t<650);
   for(const p of HP_puffs){const el=(now-p.t)/650;
-    c.save();c.globalAlpha=1-el;c.fillStyle=HP_COL[p.side].c;
+    c.save();c.globalAlpha=1-el;c.fillStyle=p.good?HP_COL[p.side].c:"#FF5A5A";
     c.font="900 22px Nunito,sans-serif";c.textAlign="center";
-    c.fillText("+1",p.x,p.y-el*30);c.restore();}
+    c.fillText(p.good?"+1":"-1",p.x,p.y-el*30);c.restore();}
 }
 function HP_pill(x,y,txt,col,flip){
   const c=HP_ctx;c.save();c.translate(x,y);if(flip)c.rotate(Math.PI);
@@ -4420,8 +4424,9 @@ function HP_loop(now){
   if(HP_mode==="solo"&&HP_phase==="play"){
     const cfg=HP_DIFF[HP_diff], b=HP_hip.top, f=HP_focus("top");
     let best=null,bd=1e9;
-    for(const p of HP_pellets){ if(p.side!=="top")continue; const d=Math.hypot(p.x-f.x,p.y-f.y); if(d<bd){bd=d;best=p;} }
-    if(best&&bd<HP_GRAB*cfg.range&&ms()-b.chompAt>cfg.cd){
+    for(const p of HP_pellets){ const d=Math.hypot(p.x-f.x,p.y-f.y); if(d<bd){bd=d;best=p;} }
+    // only chomp when its OWN colour is nearest, so it never eats a -1
+    if(best&&best.side==="top"&&bd<HP_GRAB*cfg.range&&ms()-b.chompAt>cfg.cd){
       if(Math.random()<cfg.prob)HP_chomp("top");
       else b.chompAt=ms()-cfg.cd+220;   // brief hesitation
     }
@@ -4445,7 +4450,7 @@ function HP_scrSetup(){return `
   <div style="text-align:center;margin-bottom:24px">
     <div style="font-size:40px">🦛</div>
     <div class="hf" style="font-size:40px;color:#FF4D8D;letter-spacing:1px;line-height:1;text-shadow:0 0 50px rgba(255,77,141,.4)">HIPPO CHOMP</div>
-    <div style="color:var(--mu);margin-top:8px;font-size:14px">Tap to open your hippo's mouth and gobble <b style="color:#FF4D8D">your</b> colour! 🦛</div>
+    <div style="color:var(--mu);margin-top:8px;font-size:14px">Tap to gobble <b style="color:#FF4D8D">your</b> colour — eat the wrong colour and it's <b style="color:#FF5A5A">-1</b>! 🦛</div>
   </div>
   <div class="card" style="margin-bottom:18px">
     <span class="lbl">🤖 Play vs Bot &nbsp;<span style="color:#FF4D8D">(you're Pink)</span></span>
@@ -4457,7 +4462,7 @@ function HP_scrSetup(){return `
   </div>
   <div style="text-align:center;color:var(--mu);font-size:11px;letter-spacing:2px;font-weight:900;margin-bottom:14px">— OR —</div>
   <button class="btn" id="hp-2p" style="background:linear-gradient(135deg,#FF4D8D,#2DD4BF);color:#fff;font-size:17px;padding:16px">👥 2 Players · Same Device</button>
-  <div style="text-align:center;color:var(--mu);font-size:12px;margin-top:12px">Pink taps the bottom, Teal taps the top — most of your colour in 30s wins! 🏆</div>
+  <div style="text-align:center;color:var(--mu);font-size:12px;margin-top:12px">Pink taps the bottom, Teal taps the top. Grab the wrong colour and it's -1 — highest score in 30s wins! 🏆</div>
 </div>`;}
 
 function HP_scrGame(){
@@ -4574,7 +4579,7 @@ function scrHome(){
     {t:"CABO",              c:"#00E096", i:"🎴", b:"Memory Cards", m:"👥 2–8",        d:"Peek, draw, swap and use card powers to shrink your total — and remember everyone's cards. Call \"Cabo\" when you're lowest.", go:"currentGame='cabo';render();"},
     {t:"EXPLODING KITTENS", c:"#FF6F91", i:"🙀", b:"Solo & Rooms", m:"👤 Solo · 👥 2–5", d:"Draw cards… just don't draw a kitten 🙀 Use Skips, Attacks, Favors and Nopes to survive. Last cat standing wins.", go:"currentGame='ek';render();"},
     {t:"SUMO SMASH",        c:"#38BDF8", i:"🤼", b:"Tap Battle",   m:"👤 Solo · 👥 1v1", d:"A frantic tap battle 💥 Mash as fast as you can to shove your rival out of the ring. Play a bot or a friend — best of 3 wins.", go:"currentGame='sumo';render();"},
-    {t:"HIPPO CHOMP",       c:"#FF4D8D", i:"🦛", b:"Tap & Gobble",  m:"👤 Solo · 👥 2P",  d:"Two hungry hippos, two colours 🦛 Tap to snap your hippo's mouth shut on the pellets of YOUR colour. Whoever gobbles the most in 30s wins.", go:"currentGame='hippo';render();"},
+    {t:"HIPPO CHOMP",       c:"#FF4D8D", i:"🦛", b:"Tap & Gobble",  m:"👤 Solo · 👥 2P",  d:"Two hungry hippos, two colours 🦛 Tap to snap your mouth shut on pellets of YOUR colour — but grab the wrong colour and it's -1! Highest score in 30s wins.", go:"currentGame='hippo';render();"},
     {t:"PICTIONARY",        c:"#06B6D4", i:"🎨", b:"Draw & Guess", m:"👥 2–8",        d:"One player draws, everyone guesses in real time. First correct guess wins — bad drawings are funnier anyway.", go:"currentGame='draw';render();"},
     {t:"TYPE",              c:"#e2b714", i:"⌨️", b:"Solo & Race", m:"👤 Solo · 👥 2–8", d:"A clean typing speed test. Play solo to measure your WPM and accuracy, or race friends on the same words live.", go:"currentGame='type';TYPE_view='menu';render();"},
     {t:"BASKETBALL",        c:"#E8622C", i:"🏀", b:"Solo Arcade", m:"👤 Solo",       d:"Drag to aim, release to shoot 🏀 Sink it from a brand-new spot every score. Chase your best streak, unlock 12 ball skins.", href:"hoops/"},
