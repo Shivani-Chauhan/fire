@@ -245,10 +245,22 @@ body{background:var(--bg);color:var(--te);font-family:'Nunito',sans-serif;min-he
              inset 0 1px 0 rgba(255,255,255,.08)}
 .gtile:hover::before{opacity:1}
 .gtile:active{transform:translateY(-2px) scale(.99)}
-.gtile .ico{position:relative;width:64px;height:64px;display:flex;align-items:center;justify-content:center;
-  font-size:34px;line-height:1;margin-bottom:10px;border-radius:50%;
-  background:radial-gradient(circle at 50% 38%,color-mix(in srgb,var(--c) 24%,transparent),transparent 72%);
-  filter:drop-shadow(0 4px 10px color-mix(in srgb,var(--c) 55%,transparent))}
+.gtile .ico{position:relative;width:76px;height:76px;display:flex;align-items:center;justify-content:center;
+  line-height:1;margin-bottom:12px;border-radius:50%;
+  background:radial-gradient(circle at 50% 36%,color-mix(in srgb,var(--c) 40%,transparent),color-mix(in srgb,var(--c) 9%,transparent) 66%,transparent 74%);
+  box-shadow:inset 0 0 0 1.5px color-mix(in srgb,var(--c) 32%,transparent),0 7px 18px color-mix(in srgb,var(--c) 42%,transparent);
+  transition:transform .28s cubic-bezier(.34,1.7,.5,1)}
+.gtile .ico .em{font-size:46px;line-height:1;display:inline-block;
+  filter:drop-shadow(0 4px 8px color-mix(in srgb,var(--c) 50%,transparent));
+  animation:icoBob 3.4s ease-in-out infinite}
+@keyframes icoBob{0%,100%{transform:translateY(0) rotate(0)}30%{transform:translateY(-5px) rotate(-4deg)}60%{transform:translateY(-2px) rotate(3deg)}}
+.gtile:nth-child(3n)   .ico .em{animation-delay:-.7s}
+.gtile:nth-child(3n+1) .ico .em{animation-delay:-1.9s}
+.gtile:nth-child(4n)   .ico .em{animation-duration:3.9s}
+.gtile:hover .ico{transform:scale(1.18) rotate(-5deg)}
+.gtile:hover .ico .em{animation-duration:.8s}
+.gtile:active .ico{transform:scale(1.07)}
+@media (prefers-reduced-motion:reduce){.gtile .ico .em{animation:none}}
 .gtile .nm{position:relative;font-family:'Nunito',sans-serif;font-weight:900;font-size:15px;
   letter-spacing:.2px;line-height:1.15;color:var(--c);
   text-shadow:0 0 16px color-mix(in srgb,var(--c) 45%,transparent);
@@ -4587,7 +4599,7 @@ function scrHome(){
   ];
   const tile=g=>{
     const long=g.t.length>9?" long":"";
-    const inner=`<div class="ico">${g.i}</div><div class="nm">${g.t}</div><div class="bd">${g.b}</div><div class="mt">${g.m}</div><div class="desc"><b>${g.t}</b><span>${g.d}</span></div><button class="info" type="button" aria-label="About ${g.t}" onclick="event.stopPropagation();event.preventDefault();this.closest('.gtile').classList.toggle('show')">i</button>`;
+    const inner=`<div class="ico"><span class="em">${g.i}</span></div><div class="nm">${g.t}</div><div class="bd">${g.b}</div><div class="mt">${g.m}</div><div class="desc"><b>${g.t}</b><span>${g.d}</span></div><button class="info" type="button" aria-label="About ${g.t}" onclick="event.stopPropagation();event.preventDefault();this.closest('.gtile').classList.toggle('show')">i</button>`;
     return g.href
       ? `<a class="gtile${long}" href="${g.href}" style="--c:${g.c}">${inner}</a>`
       : `<div class="gtile${long}" onclick="${g.go}" style="--c:${g.c}">${inner}</div>`;
